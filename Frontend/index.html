@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Space Flix — Streaming Films & Séries HD Gratuit en VF & VOSTFR</title>
+  <meta name="description" content="Catalogue de streaming HD 100% gratuit sans inscription ni abonnement. Regardez des milliers de films et séries en VF et VOSTFR avec Space Flix.">
+  
+  <!-- Open Graph / Meta Social -->
+  <meta property="og:title" content="Space Flix — Streaming Films & Séries HD Gratuit">
+  <meta property="og:description" content="Regardez des milliers de films et séries gratuitement en haute définition VF et VOSTFR. Aucun compte requis.">
+  <meta property="og:type" content="website">
+
+  <!-- Favicon -->
+  <link rel="icon" type="image/png" href="img/favicon.png">
+
+  <!-- Global Config & Supabase SDK -->
+  <script>
+    window.SPACE_FLIX_CONFIG = {
+      SUPABASE_URL: 'https://gfjyywtxshebhteaxxtf.supabase.co',
+      SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdmanl5d3R4c2hlYmh0ZWF4eHRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNTc4NjYsImV4cCI6MjEwMjYzMzg2Nn0.G8EwY9CNUA6fW3d8XqKSjM5qhE8-67qgcUsp0BVPHP0',
+      TMDB_API_KEY: '99b995150ed16f5fc8a3fff320ca41df',
+      TMDB_BASE_URL: 'https://api.themoviedb.org/3'
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <!-- Icons & Fonts -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="src/styles/main.css">
+</head>
+<body>
+
+  <!-- SITE STICKY HEADER WRAPPER -->
+  <div class="site-header-container" id="site-header">
+    <!-- BANDEAU D'ANNONCE SUPERIEUR -->
+    <div class="announcement-bar" id="announcement-bar">
+      <div class="announcement-content">
+        <span class="announcement-badge"><i class="fa-solid fa-bullhorn"></i> Annonce</span>
+        <span>Plateforme de streaming HD 100% gratuite — Regardez vos films & séries en VF/VOSTFR sans aucun abonnement ni inscription !</span>
+      </div>
+      <button class="announcement-close" id="close-announcement-btn" aria-label="Fermer la notification">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+    </div>
+
+    <!-- NETFLIX STYLE NAVBAR -->
+    <header class="netflix-header" id="navbar">
+      <div class="netflix-header-left">
+        <a href="#" class="netflix-logo" id="logo-btn" aria-label="SpaceFlix — Accueil">
+          <span class="netflix-logo-badge">SF</span>
+          <span class="netflix-logo-text">SPACEFLIX</span>
+        </a>
+
+        <ul class="netflix-nav-menu">
+          <li><a href="#" class="nav-link active" data-nav="home">Accueil</a></li>
+          <li><a href="#" class="nav-link" data-nav="tv">Séries</a></li>
+          <li><a href="#" class="nav-link" data-nav="movies">Films</a></li>
+          <li><a href="#" class="nav-link" data-nav="trending">Nouveautés les plus regardées</a></li>
+          <li><a href="#" class="nav-link" data-nav="favorites">Ma liste</a></li>
+        </ul>
+      </div>
+
+      <div class="netflix-header-right">
+        <div class="netflix-search-box" id="netflix-search-box">
+          <button class="netflix-search-btn" id="search-trigger-btn" aria-label="Recherche">
+            <i class="fa-solid fa-magnifying-glass"></i>
+          </button>
+          <input type="text" id="search-input" class="netflix-search-input" placeholder="Titres, genres, personnes..." autocomplete="off">
+        </div>
+
+        <button class="netflix-icon-btn" title="Direct TV" aria-label="Direct TV">
+          <i class="fa-solid fa-tv"></i>
+        </button>
+
+        <button class="netflix-icon-btn" title="Notifications" aria-label="Notifications">
+          <i class="fa-regular fa-bell"></i>
+          <span class="netflix-notif-dot"></span>
+        </button>
+
+        <!-- PROFIL & DROPDOWN MENU -->
+        <div class="netflix-profile-wrapper" id="netflix-profile-wrapper">
+          <div class="netflix-profile-btn" id="profile-btn" title="Compte / Connexion">
+            <div class="netflix-avatar" id="header-user-avatar">SF</div>
+            <i class="fa-solid fa-caret-down netflix-caret"></i>
+          </div>
+
+          <!-- DROPDOWN MENU -->
+          <div class="profile-dropdown-menu hidden" id="profile-dropdown">
+            <div class="dropdown-user-info">
+              <div class="dropdown-avatar" id="dropdown-user-avatar">SF</div>
+              <div class="dropdown-details">
+                <span class="dropdown-name" id="dropdown-user-name">Invité</span>
+                <span class="dropdown-email" id="dropdown-user-email">Non connecté</span>
+              </div>
+            </div>
+            <div class="dropdown-divider"></div>
+            <a href="#" class="dropdown-item" id="dropdown-favs-btn" data-nav="favorites">
+              <i class="fa-regular fa-bookmark"></i> Ma Liste
+            </a>
+            <a href="#" class="dropdown-item" id="dropdown-login-trigger">
+              <i class="fa-solid fa-user"></i> <span id="dropdown-action-label">Se connecter / S'inscrire</span>
+            </a>
+            <a href="about.html" class="dropdown-item" id="dropdown-about-btn">
+              <i class="fa-solid fa-code"></i> À propos de Space
+            </a>
+            <a href="privacy.html" class="dropdown-item" id="dropdown-privacy-btn">
+              <i class="fa-solid fa-shield-halved"></i> Confidentialité
+            </a>
+            <a href="terms.html" class="dropdown-item" id="dropdown-terms-btn">
+              <i class="fa-solid fa-file-contract"></i> Conditions d'utilisation
+            </a>
+            <div class="dropdown-divider" id="dropdown-logout-divider" style="display: none;"></div>
+            <a href="#" class="dropdown-item dropdown-logout-item" id="dropdown-logout-btn" style="display: none;">
+              <i class="fa-solid fa-right-from-bracket"></i> Se déconnecter
+            </a>
+          </div>
+        </div>
+      </div>
+    </header>
+  </div>
+
+  <main>
+    <!-- HERO ROUNDED BANNER CARD (HANDYFLIX EXACT MATCH) -->
+    <div class="hero-container-outer">
+      <section class="hero-rounded-card" id="hero-section">
+        <img src="" id="hero-backdrop" class="hero-backdrop" alt="">
+        <div class="hero-overlay"></div>
+        
+        <div class="hero-content">
+          <div class="hero-subtitle-tag">
+            <span class="gold-dash">—</span> COUP DE PROJECTEUR SUR LA RÉDACTION
+          </div>
+
+          <h1 class="hero-title" id="hero-title">Chargement...</h1>
+
+          <div class="hero-meta-handy">
+            <span class="hero-star-rating" id="hero-rating"><i class="fa-solid fa-star"></i> 8.6</span>
+            <span id="hero-year">2026</span>
+            <span id="hero-type">FILM</span>
+            <span id="hero-genres">ACTION • AVENTURE</span>
+          </div>
+
+          <p class="hero-synopsis" id="hero-synopsis">Chargement du synopsis du film...</p>
+
+          <div class="hero-actions">
+            <button class="handy-play-btn" id="hero-play-btn">
+              <i class="fa-solid fa-play"></i> Regardez maintenant
+            </button>
+            <button class="handy-plus-btn" id="hero-fav-btn" title="Ajouter à ma liste" aria-label="Ajouter à ma liste">
+              <i class="fa-solid fa-plus"></i>
+            </button>
+          </div>
+        </div>
+
+        <!-- HERO POSTER CARD ON THE RIGHT (EXACT MATCH SCREENSHOT 2) -->
+        <div class="hero-poster-wrapper" id="hero-poster-wrapper">
+          <img src="" id="hero-poster" class="hero-poster-img" alt="Affiche du film">
+        </div>
+      </section>
+    </div>
+
+    <!-- ABOUT HERO INTRO SECTION (HANDYFLIX EXACT MATCH) -->
+    <section class="about-hero-section" id="about-hero">
+      <div class="about-subtitle-tag">
+        <span class="gold-dash">—</span> À PROPOS DE CETTE PLATEFORME
+      </div>
+      
+      <h1 class="about-main-title">Regardez des films et des séries TV gratuitement en HD</h1>
+      
+      <p class="about-description">
+        SpaceFlix est un catalogue de streaming gratuit. Cherchez un titre, ouvrez-le et lancez la lecture : aucun abonnement ni compte requis. Conçu pour tous les passionnés de cinéma et de séries qui souhaitent regarder leurs contenus préférés, en version française (VF) ou sous-titrée (VOSTFR), sur téléphone ou ordinateur.
+      </p>
+
+      <div class="handy-cards-grid" id="category-hub">
+        <div class="handy-card" data-nav="movies">
+          <h3>Films gratuits</h3>
+          <p>Consultez les films actuellement répertoriés dans le catalogue.</p>
+        </div>
+
+        <div class="handy-card" data-nav="tv">
+          <h3>Émissions de télévision gratuites</h3>
+          <p>Trouvez la série et reprenez là où vous en étiez.</p>
+        </div>
+
+        <div class="handy-card" id="hub-search-card">
+          <h3>Rechercher dans le catalogue</h3>
+          <p>Recherchez un film ou une série par son nom.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- NOUVEAUTÉS SECTION (HANDYFLIX EXACT MATCH) -->
+    <section class="section" id="latest-section">
+      <div class="section-header-handy">
+        <div>
+          <div class="section-subtitle-tag"><span class="gold-dash">—</span> JE VIENS D'ATTERRIR</div>
+          <h2 class="section-title-handy">Nouveautés</h2>
+        </div>
+        <div class="carousel-arrows">
+          <button class="arrow-btn" id="latest-prev" aria-label="Précédent"><i class="fa-solid fa-chevron-left"></i></button>
+          <button class="arrow-btn" id="latest-next" aria-label="Suivant"><i class="fa-solid fa-chevron-right"></i></button>
+        </div>
+      </div>
+      <div class="handy-media-grid" id="latest-grid">
+        <!-- Cartes Nouveautés générées par JS -->
+      </div>
+    </section>
+
+    <!-- BARRE ET GRILLE DES GENRES -->
+    <section class="genres-bar-container">
+      <div class="section-header" style="margin-bottom: 0.6rem;">
+        <h2 class="section-title">
+          <i class="fa-solid fa-compass section-title-icon"></i>
+          Explorer par Genre
+        </h2>
+      </div>
+      <section class="genres-bar" id="genres-bar">
+        <!-- Rempli dynamiquement par JS -->
+      </section>
+    </section>
+
+    <!-- CATALOGUE DES TENDANCES (TOP 10) -->
+    <section class="section" id="trending-section">
+      <div class="section-header-handy">
+        <div>
+          <div class="section-subtitle-tag"><span class="gold-dash">—</span> TOP DU MOMENT</div>
+          <h2 class="section-title-handy">Top 10 des Tendances</h2>
+        </div>
+      </div>
+      <div class="handy-media-grid" id="trending-grid">
+        <!-- Cartes générées par JS -->
+      </div>
+    </section>
+
+    <!-- FILMS -->
+    <section class="section" id="movies-section">
+      <div class="section-header-handy">
+        <div>
+          <div class="section-subtitle-tag"><span class="gold-dash">—</span> CINÉMA</div>
+          <h2 class="section-title-handy">Films à l'Affiche</h2>
+        </div>
+      </div>
+      <div class="handy-media-grid" id="movies-grid">
+        <!-- Cartes générées par JS -->
+      </div>
+    </section>
+
+    <!-- SÉRIES -->
+    <section class="section" id="tv-section">
+      <div class="section-header-handy">
+        <div>
+          <div class="section-subtitle-tag"><span class="gold-dash">—</span> ÉMISSIONS & SÉRIES</div>
+          <h2 class="section-title-handy">Séries & Animes Populaires</h2>
+        </div>
+      </div>
+      <div class="handy-media-grid" id="tv-grid">
+        <!-- Cartes générées par JS -->
+      </div>
+    </section>
+
+    <!-- MA LISTE (FAVORIS) -->
+    <section class="section" id="favorites-section" style="display: none;">
+      <div class="section-header">
+        <h2 class="section-title">
+          <i class="fa-solid fa-bookmark section-title-icon"></i>
+          Ma Liste de Visionnage
+        </h2>
+      </div>
+      <div class="media-grid" id="favorites-grid">
+        <!-- Favoris affichés ici -->
+      </div>
+    </section>
+
+    <!-- QUESTIONS FREQUENTES (HANDYFLIX EXACT 2-COLUMN DESIGN) -->
+    <section class="section faq-section-grid" id="faq-section">
+      <h2 class="faq-grid-title">Questions fréquentes</h2>
+
+      <div class="faq-two-columns">
+        <div class="faq-card">
+          <h3>SpaceFlix est-il gratuit ?</h3>
+          <p>Oui. Vous pouvez naviguer et regarder des contenus directement depuis un navigateur web sans créer de compte ni payer d'abonnement.</p>
+        </div>
+
+        <div class="faq-card">
+          <h3>Dois-je m'inscrire ?</h3>
+          <p>Non. La lecture, la recherche et Ma liste fonctionnent dans le navigateur. Ma liste est enregistrée sur votre appareil.</p>
+        </div>
+
+        <div class="faq-card">
+          <h3>Quelles langues sont disponibles ?</h3>
+          <p>De nombreux titres sont proposés en français (VF) ou en version originale sous-titrée (VOSTFR) selon leur source.</p>
+        </div>
+
+        <div class="faq-card">
+          <h3>Est-ce que SpaceFlix héberge les vidéos ?</h3>
+          <p>Non. SpaceFlix est une interface de catalogue et de lecture. Les fichiers vidéo sont diffusés en continu depuis des sources tierces. Leur disponibilité peut changer sans préavis.</p>
+        </div>
+      </div>
+
+      <div class="faq-footer-note">
+        Pour en savoir plus, consultez la page <a href="a_propos.html" class="red-link">À propos</a> ou lisez la <a href="Confidentialité.html" class="red-link">Politique de confidentialité</a> et <a href="Conditions.html" class="red-link">les Conditions d'utilisation</a>.
+      </div>
+    </section>
+  </main>
+
+  <!-- STREAM PLAYER MODAL -->
+  <div class="modal-backdrop" id="player-modal">
+    <div class="player-modal-content">
+      <button class="modal-close-btn" id="close-player-btn" aria-label="Fermer le lecteur">
+        <i class="fa-solid fa-xmark"></i>
+      </button>
+
+      <div class="video-container">
+        <iframe id="video-iframe" class="video-iframe" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+      </div>
+
+      <div class="player-details-body">
+        <div class="server-selector">
+          <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-right: 0.5rem;">
+            <i class="fa-solid fa-server"></i> Serveurs :
+          </span>
+          <div id="server-buttons-container" style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
+            <!-- Boutons de serveurs vidéo -->
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
+          <div>
+            <h2 id="modal-title" style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; margin-bottom: 0.4rem;">Titre</h2>
+            <div style="display: flex; gap: 0.8rem; font-size: 0.85rem; color: var(--text-muted); align-items: center;">
+              <span id="modal-year">2024</span>
+              <span>•</span>
+              <span id="modal-rating" style="color: #fbbf24; font-weight: 700;"><i class="fa-solid fa-star"></i> 8.6</span>
+              <span>•</span>
+              <span id="modal-duration">2h 15m</span>
+              <span id="modal-genres-tags" style="display: flex; gap: 0.4rem; margin-left: 0.5rem;"></span>
+            </div>
+          </div>
+
+          <button class="btn-secondary" id="modal-fav-btn">
+            <i class="fa-regular fa-bookmark"></i> <span id="modal-fav-text">Ajouter à ma liste</span>
+          </button>
+        </div>
+
+        <p id="modal-synopsis" style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">Synopsis...</p>
+
+        <!-- SÉLECTEUR DE SAISONS ET ÉPISODES (SI SÉRIE) -->
+        <div id="series-episodes-wrapper" style="display: none; border-top: 1px solid var(--border-glass); padding-top: 1.2rem; margin-top: 1rem;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+            <h3 style="font-size: 1.2rem; font-weight: 700;">Épisodes</h3>
+            <select id="season-select" style="background: rgba(255,255,255,0.08); color: #fff; border: 1px solid var(--border-glass); padding: 0.4rem 1rem; border-radius: 8px; font-weight: 600; outline: none;">
+              <!-- Options de saisons -->
+            </select>
+          </div>
+          <div class="episode-grid" id="episodes-container">
+            <!-- Grille des épisodes -->
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER PREMIUM SPACE CONNECT / SPACEFLIX STYLE -->
+  <footer class="sc-footer" id="sc-footer">
+    <div class="sc-footer-top">
+      <!-- COLONNE 1 : BRAND & DEVELOPER CARD -->
+      <div class="sc-footer-col sc-brand-col">
+        <div class="sc-footer-logo">
+          <span class="sc-logo-badge">SF</span>
+          <span class="sc-logo-name">SpaceFlix</span>
+        </div>
+        <p class="sc-brand-desc">
+          La plateforme moderne de streaming HD gratuit pour accélérer votre divertissement et regarder vos films & séries préférés sans pub ni abonnement.
+        </p>
+
+        <!-- DEVELOPER CARD BOX (EXACT MATCH SCREENSHOT) -->
+        <div class="sc-dev-card">
+          <div class="sc-dev-tag">
+            <i class="fa-solid fa-code"></i> DÉVELOPPÉ AVEC PASSION PAR
+          </div>
+          <h4 class="sc-dev-name">Space <span class="sc-dev-aka">aka Asta</span></h4>
+          <p class="sc-dev-role">Architecte Web & Designer de l'écosystème SpaceFlix</p>
+        </div>
+      </div>
+
+      <!-- COLONNE 2 : NAVIGATION -->
+      <div class="sc-footer-col">
+        <h4 class="sc-col-title"><i class="fa-solid fa-compass"></i> NAVIGATION</h4>
+        <ul class="sc-footer-links">
+          <li><a href="#" data-nav="home"><i class="fa-solid fa-chevron-right sc-arrow"></i> Accueil</a></li>
+          <li><a href="#" data-nav="trending"><i class="fa-solid fa-chevron-right sc-arrow"></i> Nouveautés & Top 10</a></li>
+          <li><a href="#" data-nav="movies"><i class="fa-solid fa-chevron-right sc-arrow"></i> Catalogue Films</a></li>
+          <li><a href="#" data-nav="tv"><i class="fa-solid fa-chevron-right sc-arrow"></i> Séries TV HD</a></li>
+          <li><a href="about.html"><i class="fa-solid fa-chevron-right sc-arrow"></i> À Propos de Space</a></li>
+          <li><a href="privacy.html" id="footer-privacy-btn"><i class="fa-solid fa-chevron-right sc-arrow"></i> Confidentialité</a></li>
+          <li><a href="terms.html" id="footer-terms-btn"><i class="fa-solid fa-chevron-right sc-arrow"></i> Conditions Générales</a></li>
+        </ul>
+      </div>
+
+      <!-- COLONNE 3 : ÉCOSYSTÈME & CONTACTS -->
+      <div class="sc-footer-col">
+        <h4 class="sc-col-title"><i class="fa-solid fa-share-nodes"></i> ÉCOSYSTÈME</h4>
+        <ul class="sc-footer-links sc-ecosystem-links">
+          <li>
+            <a href="https://github.com/Christian667z" target="_blank">
+              <i class="fa-brands fa-github sc-eco-icon"></i> GitHub (Christian667z)
+            </a>
+          </li>
+          <li>
+            <a href="https://wa.me/50946966290" target="_blank" class="sc-wa-link">
+              <i class="fa-brands fa-whatsapp sc-eco-icon"></i> WhatsApp Direct (+509 4696-6290)
+            </a>
+          </li>
+          <li>
+            <a href="mailto:ogspacetech@gmail.com">
+              <i class="fa-regular fa-envelope sc-eco-icon"></i> Email (ogspacetech@gmail.com)
+            </a>
+          </li>
+          <li>
+            <a href="https://wa.me/50946966290" target="_blank">
+              <i class="fa-solid fa-users sc-eco-icon"></i> Groupe WhatsApp Officiel
+            </a>
+          </li>
+        </ul>
+      </div>
+
+      <!-- COLONNE 4 : ENGAGEMENTS (PILL BADGES) -->
+      <div class="sc-footer-col">
+        <h4 class="sc-col-title"><i class="fa-solid fa-shield-halved"></i> ENGAGEMENTS</h4>
+        <div class="sc-engagements-grid">
+          <a href="privacy.html" style="text-decoration: none;">
+            <div class="sc-pill-badge" id="pill-privacy-trigger">
+              <i class="fa-solid fa-lock sc-pill-icon"></i> Confidentialité Sécurisée
+            </div>
+          </a>
+          <div class="sc-pill-badge">
+            <i class="fa-solid fa-bolt sc-pill-icon"></i> Multi-Serveurs HD VF/VOSTFR
+          </div>
+          <div class="sc-pill-badge">
+            <i class="fa-solid fa-film sc-pill-icon"></i> Catalogue Mis à Jour 24/7
+          </div>
+          <div class="sc-pill-badge">
+            <i class="fa-solid fa-globe sc-pill-icon"></i> 100% Gratuit & Illimité
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SEPARATOR LINE -->
+    <div class="sc-footer-divider"></div>
+
+    <!-- FOOTER BOTTOM -->
+    <div class="sc-footer-bottom">
+      <div class="sc-bottom-left">
+        <span>© 2026 <strong>SpaceFlix</strong>. Conçu & Développé par <a href="about.html" style="text-decoration: none;"><strong class="sc-red-highlight">Space</strong></a>. Tous droits réservés.</span>
+        <div class="sc-status-pill">
+          <span class="sc-status-dot"></span> Écosystème Space En Ligne
+        </div>
+      </div>
+
+      <div class="sc-bottom-right">
+        <a href="privacy.html" id="bottom-privacy-btn"><i class="fa-solid fa-user-shield"></i> Confidentialité</a>
+        <span class="sc-dot">•</span>
+        <a href="terms.html" id="bottom-terms-btn"><i class="fa-solid fa-scale-balanced"></i> Conditions Générales</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- MODAL D'AUTHENTIFICATION & INSCRIPTION (NETFLIX STYLE) -->
+  <div class="auth-modal-backdrop hidden" id="auth-modal">
+    <div class="auth-modal-card">
+      <button class="auth-modal-close" id="close-auth-btn" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+
+      <div class="auth-header">
+        <h2 class="auth-title" id="auth-modal-title">Espace Membre SpaceFlix</h2>
+        <p class="auth-subtitle" id="auth-modal-subtitle">Connectez-vous pour synchroniser vos favoris et vos préférences.</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab-btn active" id="tab-login-btn">Se connecter</button>
+        <button class="auth-tab-btn" id="tab-signup-btn">S'inscrire</button>
+      </div>
+
+      <!-- BOUTON CONNEXION GOOGLE OAUTH -->
+      <button class="google-auth-btn" id="google-login-btn">
+        <svg class="google-icon" width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span>Continuer avec Google</span>
+      </button>
+
+      <div class="auth-divider">
+        <span>ou avec votre e-mail</span>
+      </div>
+
+      <!-- FORMULAIRE DE CONNEXION / INSCRIPTION -->
+      <form id="auth-form" class="auth-form">
+        <div class="auth-field" id="name-field-group" style="display: none;">
+          <label for="auth-name">Nom d'utilisateur</label>
+          <input type="text" id="auth-name" placeholder="Ex: Alex Flix" autocomplete="name">
+        </div>
+
+        <div class="auth-field">
+          <label for="auth-email">Adresse E-mail</label>
+          <input type="email" id="auth-email" placeholder="nom@exemple.com" required autocomplete="email">
+        </div>
+
+        <div class="auth-field">
+          <label for="auth-password">Mot de passe</label>
+          <div class="password-input-wrap">
+            <input type="password" id="auth-password" placeholder="••••••••" required autocomplete="current-password">
+            <button type="button" class="toggle-password-btn" id="toggle-pwd-btn" aria-label="Afficher le mot de passe">
+              <i class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="auth-error-msg hidden" id="auth-error-msg"></div>
+
+        <button type="submit" class="auth-submit-btn" id="auth-submit-btn">
+          Se connecter
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL INFORMATIONS / LÉGAL (À PROPOS, PRIVACY, TERMS) -->
+  <div class="info-modal-backdrop hidden" id="info-modal">
+    <div class="info-modal-card">
+      <button class="info-modal-close" id="close-info-modal-btn" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+
+      <div class="info-modal-header">
+        <span class="info-modal-badge" id="info-modal-badge">— SPACEFLIX INFORMATIONS</span>
+        <h2 class="info-modal-title" id="info-modal-title">À Propos</h2>
+      </div>
+
+      <div class="info-modal-tabs">
+        <button class="info-tab-btn active" id="info-tab-about">À Propos</button>
+        <button class="info-tab-btn" id="info-tab-privacy">Confidentialité</button>
+        <button class="info-tab-btn" id="info-tab-terms">Conditions</button>
+      </div>
+
+      <div class="info-modal-body" id="info-modal-body">
+        <!-- Contenu dynamique inséré par JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- SUPABASE BACKEND CONFIGURATION -->
+  <script>
+    window.SPACE_FLIX_CONFIG = {
+      SUPABASE_URL: 'https://gfjyywtxshebhteaxxtf.supabase.co',
+      SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdmanl5d3R4c2hlYmh0ZWF4eHRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNTc4NjYsImV4cCI6MjEwMjYzMzg2Nn0.G8EwY9CNUA6fW3d8XqKSjM5qhE8-67qgcUsp0BVPHP0'
+    };
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+  <!-- APPLICATION LOGIC SCRIPT -->
+  <script type="module" src="src/app/main.js"></script>
+</body>
+</html>
