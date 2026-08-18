@@ -213,9 +213,420 @@
       padding: 0.35rem 1rem;
       border-radius: 20px;
     }
+
+    /* =====================================================
+       FILTERS PAGE — STREAMING CATALOGUE REDESIGN
+       ===================================================== */
+    body.filters-page {
+      --filters-accent: #6d7cff;
+      --filters-accent-2: #20d4c4;
+      --filters-surface: rgba(16, 19, 29, 0.9);
+      --filters-muted: #8e98ab;
+      background:
+        radial-gradient(circle at 12% 8%, rgba(109, 124, 255, 0.15), transparent 30rem),
+        radial-gradient(circle at 88% 28%, rgba(32, 212, 196, 0.07), transparent 26rem),
+        #050608 !important;
+    }
+
+    .filters-page .site-header-outer {
+      position: fixed;
+      inset: 0 0 auto;
+      z-index: 1000;
+      background: rgba(5, 6, 8, 0.82) !important;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+      backdrop-filter: blur(18px);
+    }
+
+    .filters-page .site-header-inner {
+      width: 100%;
+      min-height: 70px;
+      padding: 0.65rem clamp(1rem, 3vw, 2.8rem);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1.5rem;
+    }
+
+    .filters-page .netflix-header-left,
+    .filters-page .netflix-header-right {
+      flex-shrink: 0;
+    }
+
+    .filters-page .netflix-logo-badge,
+    .filters-page .netflix-avatar {
+      background: linear-gradient(135deg, var(--filters-accent), #4554d9) !important;
+      box-shadow: 0 5px 22px rgba(109, 124, 255, 0.25);
+    }
+
+    .filters-page .netflix-logo-text {
+      color: #f4f6fb !important;
+    }
+
+    .filters-page .netflix-nav-menu .nav-link.active,
+    .filters-page .netflix-nav-menu .nav-link:hover,
+    .filters-page .netflix-search-btn,
+    .filters-page .netflix-caret {
+      color: #aeb7ff !important;
+    }
+
+    .filters-page .netflix-search-box {
+      border-color: rgba(255, 255, 255, 0.14) !important;
+      background: rgba(255, 255, 255, 0.055);
+      border-radius: 999px;
+    }
+
+    .filters-page .netflix-search-input {
+      width: 180px;
+    }
+
+    .filters-page-main {
+      width: min(1180px, calc(100% - 48px));
+      margin: 0 auto;
+      padding: 6.8rem 0 5rem;
+    }
+
+    .filters-hero {
+      min-height: 240px;
+      padding: clamp(1.8rem, 5vw, 3.3rem);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 26px;
+      overflow: hidden;
+      position: relative;
+      display: flex;
+      align-items: end;
+      background:
+        linear-gradient(90deg, rgba(5, 6, 8, 0.96) 0%, rgba(5, 6, 8, 0.72) 50%, rgba(5, 6, 8, 0.25) 100%),
+        linear-gradient(180deg, rgba(5, 6, 8, 0.1), #050608),
+        url("img/space_flix_bg.png") center / cover;
+      box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+    }
+
+    .filters-hero::after {
+      content: "";
+      position: absolute;
+      inset: auto 8% 0;
+      height: 2px;
+      background: linear-gradient(90deg, var(--filters-accent), var(--filters-accent-2), transparent);
+      opacity: 0.9;
+    }
+
+    .filters-hero-content {
+      position: relative;
+      z-index: 1;
+      max-width: 590px;
+    }
+
+    .filters-hero-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: #aeb7ff;
+      font-size: 0.7rem;
+      font-weight: 800;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      margin-bottom: 0.85rem;
+    }
+
+    .filters-hero-kicker i {
+      color: var(--filters-accent-2);
+    }
+
+    .filters-hero h1 {
+      color: #fff;
+      font-family: var(--font-heading), sans-serif;
+      font-size: clamp(2rem, 4.8vw, 3.55rem);
+      line-height: 1;
+      letter-spacing: -0.055em;
+      margin: 0 0 0.8rem;
+    }
+
+    .filters-hero h1 span {
+      color: #aeb7ff;
+    }
+
+    .filters-hero p {
+      max-width: 530px;
+      margin: 0;
+      color: #a8b0c0;
+      font-size: 0.94rem;
+      line-height: 1.65;
+    }
+
+    .filter-sheet-card {
+      margin-top: 1.5rem;
+      padding: 1.3rem !important;
+      background: var(--filters-surface) !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      border-radius: 20px !important;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3) !important;
+    }
+
+    .filter-sheet-card::before {
+      display: none;
+    }
+
+    .filter-sheet-header {
+      margin: 0 0 1.1rem;
+      padding: 0.1rem 0.2rem 1.1rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    }
+
+    .filter-sheet-title-group {
+      gap: 0.45rem;
+    }
+
+    .filter-sheet-badge {
+      color: #aeb7ff;
+      background: rgba(109, 124, 255, 0.13);
+      border: 1px solid rgba(109, 124, 255, 0.3);
+      font-size: 0.65rem;
+      letter-spacing: 0.12em;
+    }
+
+    .filter-sheet-title {
+      font-size: 1.25rem;
+      letter-spacing: -0.03em;
+    }
+
+    .filter-sheet-title i,
+    .filter-sheet-title span.red {
+      color: #fff !important;
+    }
+
+    .filter-sheet-title span.red {
+      color: #aeb7ff !important;
+    }
+
+    .filters-page .btn-apply-filters-sheet,
+    .filters-page #btn-trigger-first-search {
+      background: linear-gradient(135deg, var(--filters-accent), #4c5ce2) !important;
+      box-shadow: 0 9px 24px rgba(109, 124, 255, 0.24) !important;
+    }
+
+    .filters-page .btn-apply-filters-sheet:hover,
+    .filters-page #btn-trigger-first-search:hover {
+      transform: translateY(-2px);
+      filter: brightness(1.1);
+    }
+
+    .filters-page .btn-reset-filters-sheet {
+      border-color: rgba(255, 255, 255, 0.12) !important;
+      background: rgba(255, 255, 255, 0.04) !important;
+      color: #c8cfdd !important;
+    }
+
+    .filters-page .btn-reset-filters-sheet i {
+      color: #aeb7ff !important;
+    }
+
+    .filter-sheet-grid {
+      grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+      gap: 0.7rem !important;
+    }
+
+    .filter-sheet-group {
+      gap: 0.4rem !important;
+    }
+
+    .filter-sheet-group label {
+      color: #9fa9ba !important;
+      font-size: 0.68rem !important;
+      letter-spacing: 0.1em;
+    }
+
+    .filter-sheet-group label i {
+      color: #aeb7ff !important;
+    }
+
+    .filter-sheet-select {
+      background-color: rgba(255, 255, 255, 0.045) !important;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23aeb7ff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+      border: 1px solid rgba(255, 255, 255, 0.1) !important;
+      color: #e8ecf4 !important;
+      font-size: 0.82rem !important;
+      font-weight: 600 !important;
+      min-height: 44px !important;
+    }
+
+    .filter-sheet-select:hover,
+    .filter-sheet-select:focus {
+      border-color: rgba(109, 124, 255, 0.7) !important;
+      box-shadow: 0 0 0 3px rgba(109, 124, 255, 0.11) !important;
+      background-color: rgba(109, 124, 255, 0.08) !important;
+    }
+
+    .filter-sheet-select option {
+      background: #111522 !important;
+    }
+
+    #filtered-results-wrapper {
+      margin-top: 2rem;
+    }
+
+    #filter-initial-placeholder {
+      margin-top: 0 !important;
+      min-height: 240px;
+      padding: 3rem 1.5rem !important;
+      display: grid;
+      place-content: center;
+      background: rgba(16, 19, 29, 0.72) !important;
+      border: 1px dashed rgba(255, 255, 255, 0.14) !important;
+      border-radius: 20px !important;
+    }
+
+    #filter-initial-placeholder > div:first-child {
+      width: 52px !important;
+      height: 52px !important;
+      margin-bottom: 1rem !important;
+      background: rgba(109, 124, 255, 0.12) !important;
+      border-color: rgba(109, 124, 255, 0.28) !important;
+      color: #aeb7ff !important;
+      font-size: 1.25rem !important;
+    }
+
+    #filter-initial-placeholder h3 {
+      font-size: 1.15rem !important;
+      margin-bottom: 0.45rem !important;
+    }
+
+    #filter-initial-placeholder p {
+      color: var(--filters-muted) !important;
+      font-size: 0.86rem !important;
+    }
+
+    .results-section-header {
+      margin: 0 0 1.15rem;
+      padding: 0 0 0.85rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .results-section-header h2 {
+      font-size: 1.25rem !important;
+      letter-spacing: -0.02em;
+    }
+
+    .results-section-header h2 i {
+      color: #aeb7ff !important;
+    }
+
+    .results-count-pill {
+      color: #aeb7ff;
+      background: rgba(109, 124, 255, 0.1);
+      border: 1px solid rgba(109, 124, 255, 0.28);
+      font-size: 0.72rem;
+    }
+
+    .filters-page #filtered-catalog-grid {
+      grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+      gap: 1.4rem 1rem;
+    }
+
+    .filters-page .handy-media-card {
+      min-width: 0;
+    }
+
+    .filters-page .handy-poster-wrap {
+      border-radius: 14px;
+      margin-bottom: 0.65rem;
+      border-color: rgba(255, 255, 255, 0.08);
+      background: #121622;
+      box-shadow: 0 9px 20px rgba(0, 0, 0, 0.35);
+    }
+
+    .filters-page .handy-media-card:hover {
+      transform: translateY(-6px);
+    }
+
+    .filters-page .handy-media-card:hover .handy-poster-wrap {
+      box-shadow: 0 15px 28px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(109, 124, 255, 0.35);
+    }
+
+    .filters-page .handy-card-title {
+      font-size: 0.82rem;
+    }
+
+    .filters-page .handy-card-sub {
+      font-size: 0.68rem;
+    }
+
+    .filters-page .handy-star {
+      color: #aeb7ff;
+    }
+
+    .filters-page .handy-type {
+      color: #7f899c;
+    }
+
+    @media (max-width: 960px) {
+      .filter-sheet-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+      }
+    }
+
+    @media (max-width: 700px) {
+      .filters-page-main {
+        width: min(100% - 24px, 560px);
+        padding-top: 6.2rem;
+      }
+
+      .filters-hero {
+        min-height: 220px;
+        border-radius: 20px;
+      }
+
+      .filter-sheet-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      }
+
+      .filter-sheet-header {
+        align-items: flex-start;
+      }
+    }
+
+    @media (max-width: 460px) {
+      .filters-page .netflix-header-left {
+        gap: 12px;
+      }
+
+      .filters-page .netflix-nav-menu {
+        display: none;
+      }
+
+      .filters-page .netflix-search-input {
+        width: 125px;
+      }
+
+      .filters-page-main {
+        padding-top: 5.4rem;
+      }
+
+      .filters-hero {
+        min-height: 200px;
+        padding: 1.5rem;
+      }
+
+      .filter-sheet-header > div:last-child {
+        width: 100%;
+      }
+
+      .filter-sheet-header > div:last-child button {
+        flex: 1;
+        justify-content: center;
+      }
+
+      .filter-sheet-grid {
+        grid-template-columns: 1fr !important;
+      }
+
+      .filters-page #filtered-catalog-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 1rem 0.7rem;
+      }
+    }
   </style>
 </head>
-<body class="bg-black text-white font-sans antialiased">
+<body class="bg-black text-white font-sans antialiased filters-page">
 
   <!-- NAVBAR SEULE ET ÉPURÉE -->
   <div class="site-header-outer" id="site-header" style="background: #000000; border-bottom: 1px solid rgba(229, 9, 20, 0.4);">
@@ -278,23 +689,30 @@
     </header>
   </div>
 
-  <!-- FEUILLE DE FILTRES DÉDIÉE (NOIR & ROUGE DÉDIÉE) -->
-  <main class="filter-sheet-wrapper">
+  <main class="filter-sheet-wrapper filters-page-main">
 
-    <!-- CARTE DÉDIÉE FILTRES -->
+    <section class="filters-hero" aria-labelledby="filters-hero-title">
+      <div class="filters-hero-content">
+        <span class="filters-hero-kicker"><i class="fa-solid fa-compass"></i> Explorer SpaceFlix</span>
+        <h1 id="filters-hero-title">Trouve ton prochain <span>film préféré.</span></h1>
+        <p>Parcours notre catalogue de films, séries et animes. Affine ta recherche en quelques clics et lance ton contenu en HD.</p>
+      </div>
+    </section>
+
+    <!-- CARTE DES FILTRES -->
     <div class="filter-sheet-card" id="advanced-filters-section">
       <div class="filter-sheet-header">
         <div class="filter-sheet-title-group">
-          <span class="filter-sheet-badge"><i class="fa-solid fa-sliders"></i> DÉDIÉ CATALOGUE</span>
+          <span class="filter-sheet-badge"><i class="fa-solid fa-sliders"></i> Recherche avancée</span>
           <h1 class="filter-sheet-title">
             <i class="fa-solid fa-filter" style="color: #E50914;"></i>
-            Filtres <span class="red">Avancés</span>
+            Affiner le catalogue
           </h1>
         </div>
 
         <div style="display: flex; gap: 0.8rem; align-items: center; flex-wrap: wrap;">
           <button class="btn-apply-filters-sheet" id="btn-apply-filters" style="background: #E50914; color: #ffffff; border: none; font-weight: 800; border-radius: 30px; padding: 0.65rem 1.6rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; font-size: 0.9rem; box-shadow: 0 0 20px rgba(229, 9, 20, 0.4); transition: all 0.25s ease;">
-            <i class="fa-solid fa-magnifying-glass"></i> Appliquer les filtres
+           <i class="fa-solid fa-magnifying-glass"></i> Voir les résultats
           </button>
           <button class="btn-reset-filters-sheet" id="btn-reset-filters" title="Réinitialiser tous les filtres">
             <i class="fa-solid fa-rotate-left" style="color: #E50914;"></i> Réinitialiser
@@ -378,12 +796,12 @@
         <div style="width: 76px; height: 76px; border-radius: 50%; background: rgba(229, 9, 20, 0.12); color: #E50914; display: flex; align-items: center; justify-content: center; font-size: 2.2rem; margin: 0 auto 1.2rem auto; border: 1px solid rgba(229, 9, 20, 0.3);">
           <i class="fa-solid fa-sliders"></i>
         </div>
-        <h3 style="font-family: var(--font-heading), sans-serif; font-size: 1.4rem; font-weight: 800; color: #ffffff; margin-bottom: 0.5rem;">Aucun filtre activé</h3>
+          <h3 style="font-family: var(--font-heading), sans-serif; font-size: 1.4rem; font-weight: 800; color: #ffffff; margin-bottom: 0.5rem;">Prêt à regarder quelque chose ?</h3>
         <p style="color: #a3a3a3; font-size: 0.95rem; max-width: 480px; margin: 0 auto 1.6rem auto; line-height: 1.5;">
-          Sélectionnez vos critères ci-dessus (Format, Genre, Année, Langue...) et cliquez sur <strong style="color: #ffffff;">"Appliquer les filtres"</strong> pour afficher les films et séries correspondant.
+           Choisis un format, un genre ou une année pour découvrir les titres qui correspondent à tes envies.
         </p>
         <button id="btn-trigger-first-search" style="background: #E50914; color: #ffffff; font-weight: 800; padding: 0.75rem 2.2rem; border-radius: 30px; border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 10px; box-shadow: 0 0 25px rgba(229, 9, 20, 0.55); font-size: 0.95rem; transition: transform 0.2s ease;">
-          <i class="fa-solid fa-magnifying-glass"></i> Afficher les films & séries
+          <i class="fa-solid fa-magnifying-glass"></i> Explorer les titres
         </button>
       </div>
 
