@@ -23,7 +23,8 @@
       TMDB_BASE_URL: 'https://api.themoviedb.org/3'
     };
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <!-- Icons & Fonts -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -37,11 +38,13 @@
     <div class="announcement-bar" id="announcement-bar">
       <div class="announcement-content">
         <span class="announcement-badge"><i class="fa-solid fa-bullhorn"></i> Annonce</span>
-        <span>Plateforme de streaming HD 100% gratuite — Regardez vos films & séries en VF/VOSTFR sans aucun abonnement ni inscription !</span>
+        <span>Plateforme de streaming HD 100% gratuite — Reprise de lecture instantanée & Multi-serveurs VF/VOSTFR !</span>
       </div>
-      <button class="announcement-close" id="close-announcement-btn" aria-label="Fermer la notification">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
+      <div class="announcement-actions">
+        <button class="announcement-close" id="close-announcement-btn" aria-label="Fermer la notification">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
     </div>
 
     <!-- NETFLIX STYLE NAVBAR -->
@@ -56,7 +59,7 @@
           <li><a href="#" class="nav-link active" data-nav="home">Accueil</a></li>
           <li><a href="#" class="nav-link" data-nav="tv">Séries</a></li>
           <li><a href="#" class="nav-link" data-nav="movies">Films</a></li>
-          <li><a href="#" class="nav-link" data-nav="trending">Nouveautés les plus regardées</a></li>
+          <li><a href="#" class="nav-link" data-nav="trending">Nouveautés</a></li>
           <li><a href="#" class="nav-link" data-nav="favorites">Ma liste</a></li>
         </ul>
       </div>
@@ -66,17 +69,19 @@
           <button class="netflix-search-btn" id="search-trigger-btn" aria-label="Recherche">
             <i class="fa-solid fa-magnifying-glass"></i>
           </button>
-          <input type="text" id="search-input" class="netflix-search-input" placeholder="Titres, genres, personnes..." autocomplete="off">
+          <input type="text" id="search-input" class="netflix-search-input" placeholder="Titres, genres, acteurs..." autocomplete="off">
+
+          <!-- POPUP RESULTATS INSTANTANÉS (LIVE AUTOCOMPLETE) -->
+          <div class="instant-search-dropdown hidden" id="instant-search-dropdown">
+            <div class="instant-search-header">
+              <span id="instant-search-count"><i class="fa-solid fa-bolt" style="color: #ff3344; margin-right: 4px;"></i> Suggestions en direct</span>
+              <button id="close-instant-search-btn" class="instant-search-close" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            <div class="instant-search-results" id="instant-search-results">
+              <!-- Rempli dynamiquement -->
+            </div>
+          </div>
         </div>
-
-        <button class="netflix-icon-btn" title="Direct TV" aria-label="Direct TV">
-          <i class="fa-solid fa-tv"></i>
-        </button>
-
-        <button class="netflix-icon-btn" title="Notifications" aria-label="Notifications">
-          <i class="fa-regular fa-bell"></i>
-          <span class="netflix-notif-dot"></span>
-        </button>
 
         <!-- PROFIL & DROPDOWN MENU -->
         <div class="netflix-profile-wrapper" id="netflix-profile-wrapper">
@@ -101,6 +106,12 @@
             <a href="#" class="dropdown-item" id="dropdown-login-trigger">
               <i class="fa-solid fa-user"></i> <span id="dropdown-action-label">Se connecter / S'inscrire</span>
             </a>
+            <a href="#" class="dropdown-item" id="dropdown-zip-download-btn">
+              <i class="fa-solid fa-file-zipper" style="color: #ff3344;"></i> Télécharger le ZIP du projet
+            </a>
+            <a href="#" class="dropdown-item" id="dropdown-sql-btn">
+              <i class="fa-solid fa-database" style="color: #E50914;"></i> Script Supabase SQL
+            </a>
             <a href="about.html" class="dropdown-item" id="dropdown-about-btn">
               <i class="fa-solid fa-code"></i> À propos de Space
             </a>
@@ -121,10 +132,10 @@
   </div>
 
   <main>
-    <!-- HERO ROUNDED BANNER CARD (HANDYFLIX EXACT MATCH) -->
+    <!-- HERO ROUNDED BANNER CARD -->
     <div class="hero-container-outer">
       <section class="hero-rounded-card" id="hero-section">
-        <img src="" id="hero-backdrop" class="hero-backdrop" alt="">
+        <img src="" id="hero-backdrop" class="hero-backdrop" alt="Bannière principale">
         <div class="hero-overlay"></div>
         
         <div class="hero-content">
@@ -153,57 +164,147 @@
           </div>
         </div>
 
-        <!-- HERO POSTER CARD ON THE RIGHT (EXACT MATCH SCREENSHOT 2) -->
+        <!-- HERO POSTER CARD ON THE RIGHT -->
         <div class="hero-poster-wrapper" id="hero-poster-wrapper">
           <img src="" id="hero-poster" class="hero-poster-img" alt="Affiche du film">
         </div>
       </section>
     </div>
 
-    <!-- ABOUT HERO INTRO SECTION (HANDYFLIX EXACT MATCH) -->
-    <section class="about-hero-section" id="about-hero">
-      <div class="about-subtitle-tag">
-        <span class="gold-dash">—</span> À PROPOS DE CETTE PLATEFORME
+    <!-- SECTION REPRENDRE LA LECTURE (CONTINUE WATCHING) -->
+    <section class="section" id="continue-watching-section" style="display: none;">
+      <div class="section-header-handy">
+        <div>
+          <div class="section-subtitle-tag"><span class="gold-dash">—</span> REPRISE AUTOMATIQUE</div>
+          <h2 class="section-title-handy">Reprendre la lecture</h2>
+        </div>
       </div>
-      
-      <h1 class="about-main-title">Regardez des films et des séries TV gratuitement en HD</h1>
-      
-      <p class="about-description">
-        SpaceFlix est un catalogue de streaming gratuit. Cherchez un titre, ouvrez-le et lancez la lecture : aucun abonnement ni compte requis. Conçu pour tous les passionnés de cinéma et de séries qui souhaitent regarder leurs contenus préférés, en version française (VF) ou sous-titrée (VOSTFR), sur téléphone ou ordinateur.
-      </p>
-
-      <div class="handy-cards-grid" id="category-hub">
-        <div class="handy-card" data-nav="movies">
-          <h3>Films gratuits</h3>
-          <p>Consultez les films actuellement répertoriés dans le catalogue.</p>
-        </div>
-
-        <div class="handy-card" data-nav="tv">
-          <h3>Émissions de télévision gratuites</h3>
-          <p>Trouvez la série et reprenez là où vous en étiez.</p>
-        </div>
-
-        <div class="handy-card" id="hub-search-card">
-          <h3>Rechercher dans le catalogue</h3>
-          <p>Recherchez un film ou une série par son nom.</p>
-        </div>
+      <div class="continue-watching-grid" id="continue-watching-grid">
+        <!-- Cartes insérées dynamiquement -->
       </div>
     </section>
 
-    <!-- NOUVEAUTÉS SECTION (HANDYFLIX EXACT MATCH) -->
+    <!-- NOUVEAUTÉS SECTION -->
     <section class="section" id="latest-section">
       <div class="section-header-handy">
         <div>
-          <div class="section-subtitle-tag"><span class="gold-dash">—</span> JE VIENS D'ATTERRIR</div>
-          <h2 class="section-title-handy">Nouveautés</h2>
-        </div>
-        <div class="carousel-arrows">
-          <button class="arrow-btn" id="latest-prev" aria-label="Précédent"><i class="fa-solid fa-chevron-left"></i></button>
-          <button class="arrow-btn" id="latest-next" aria-label="Suivant"><i class="fa-solid fa-chevron-right"></i></button>
+          <div class="section-subtitle-tag"><span class="gold-dash">—</span> EN CE MOMENT</div>
+          <h2 class="section-title-handy">Nouveautés & Sorties Récentes</h2>
         </div>
       </div>
       <div class="handy-media-grid" id="latest-grid">
         <!-- Cartes Nouveautés générées par JS -->
+      </div>
+    </section>
+
+    <!-- SECTION FILTRES AVANCÉS & CATALOGUE (STYLE HANDYFLIX) -->
+    <section class="section advanced-filters-section" id="advanced-filters-section">
+      <div class="filter-panel-card">
+        <div class="filter-panel-header">
+          <div class="filter-panel-title">
+            <i class="fa-solid fa-sliders" style="color: #ff3344;"></i>
+            <span>Filtres Avancés du Catalogue</span>
+          </div>
+          <button class="btn-reset-filters" id="btn-reset-filters" title="Réinitialiser les filtres">
+            <i class="fa-solid fa-rotate-left"></i> Réinitialiser
+          </button>
+        </div>
+
+        <div class="filter-controls-grid">
+          <!-- Format -->
+          <div class="filter-control-group">
+            <label><i class="fa-solid fa-film"></i> Format</label>
+            <select id="filter-type-select" class="filter-select">
+              <option value="all">Tous (Films & Séries)</option>
+              <option value="movie">Films uniquement</option>
+              <option value="tv">Séries TV & Animes</option>
+            </select>
+          </div>
+
+          <!-- Genre -->
+          <div class="filter-control-group">
+            <label><i class="fa-solid fa-tag"></i> Genre</label>
+            <select id="filter-genre-select" class="filter-select">
+              <option value="Tous">Tous les genres</option>
+              <option value="Action">Action</option>
+              <option value="Aventure">Aventure</option>
+              <option value="Animation">Animation</option>
+              <option value="Comédie">Comédie</option>
+              <option value="Crime">Crime / Policier</option>
+              <option value="Drame">Drame</option>
+              <option value="Fantastique">Fantastique</option>
+              <option value="Horreur">Horreur</option>
+              <option value="Romance">Romance</option>
+              <option value="Sci-Fi">Science-Fiction</option>
+              <option value="Thriller">Thriller</option>
+              <option value="Mystère">Mystère</option>
+            </select>
+          </div>
+
+          <!-- Année -->
+          <div class="filter-control-group">
+            <label><i class="fa-regular fa-calendar"></i> Année de sortie</label>
+            <select id="filter-year-select" class="filter-select">
+              <option value="all">Toutes les années</option>
+              <option value="2025">2025 (Très récent)</option>
+              <option value="2024">2024</option>
+              <option value="2023">2023</option>
+              <option value="2022">2022</option>
+              <option value="2021">2021</option>
+              <option value="2020">2020</option>
+              <option value="2019">2019</option>
+              <option value="2018">2018</option>
+              <option value="2015">2015 - 2017</option>
+              <option value="2010">Années 2010</option>
+              <option value="2000">Classiques 2000s</option>
+            </select>
+          </div>
+
+          <!-- Langue / Version -->
+          <div class="filter-control-group">
+            <label><i class="fa-solid fa-globe"></i> Version / Langue</label>
+            <select id="filter-lang-select" class="filter-select">
+              <option value="all">Toutes les versions</option>
+              <option value="fr">Version Française (VF)</option>
+              <option value="en">Version Originale (VO / VOSTFR)</option>
+              <option value="ht">Créole / Kreyòl (Spécial)</option>
+            </select>
+          </div>
+
+          <!-- Tri -->
+          <div class="filter-control-group">
+            <label><i class="fa-solid fa-arrow-down-wide-short"></i> Trier par</label>
+            <select id="filter-sort-select" class="filter-select">
+              <option value="popularity.desc">Plus Populaires</option>
+              <option value="vote_average.desc">Mieux Notés (Top IMDb)</option>
+              <option value="primary_release_date.desc">Plus Récents</option>
+              <option value="title.asc">Titre (A-Z)</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- GRILLE DES RESULTATS FILTRÉS AVEC PAGINATION INFINIE -->
+      <div id="filtered-results-wrapper" class="filtered-results-wrapper" style="display: none; margin-top: 1.5rem;">
+        <div class="section-header-handy">
+          <div>
+            <div class="section-subtitle-tag"><span class="gold-dash">—</span> RÉSULTATS DU CATALOGUE</div>
+            <h2 class="section-title-handy" id="filtered-catalog-title">Films & Séries Correspondants</h2>
+          </div>
+          <span id="filtered-catalog-badge" class="badge" style="background: rgba(229,9,20,0.2); color: #ff3344; font-weight: 700; padding: 0.3rem 0.8rem; border-radius: 6px;">Page 1</span>
+        </div>
+
+        <div class="handy-media-grid" id="filtered-catalog-grid">
+          <!-- Cartes chargées dynamiquement -->
+        </div>
+
+        <!-- BOUTON CHARGEMENT INFINI / PAGINATION -->
+        <div style="display: flex; justify-content: center; margin-top: 2.2rem; margin-bottom: 1.5rem;">
+          <button class="btn-load-more" id="btn-load-more-catalog">
+            <i class="fa-solid fa-circle-notch fa-spin hidden" id="load-more-spinner"></i>
+            <span id="load-more-text"><i class="fa-solid fa-arrow-down" style="margin-right: 6px;"></i> Charger plus de films & séries</span>
+          </button>
+        </div>
       </div>
     </section>
 
@@ -225,7 +326,7 @@
       <div class="section-header-handy">
         <div>
           <div class="section-subtitle-tag"><span class="gold-dash">—</span> TOP DU MOMENT</div>
-          <h2 class="section-title-handy">Top 10 des Tendances</h2>
+          <h2 class="section-title-handy">Top des Tendances</h2>
         </div>
       </div>
       <div class="handy-media-grid" id="trending-grid">
@@ -267,12 +368,12 @@
           Ma Liste de Visionnage
         </h2>
       </div>
-      <div class="media-grid" id="favorites-grid">
+      <div class="handy-media-grid" id="favorites-grid">
         <!-- Favoris affichés ici -->
       </div>
     </section>
 
-    <!-- QUESTIONS FREQUENTES (HANDYFLIX EXACT 2-COLUMN DESIGN) -->
+    <!-- QUESTIONS FREQUENTES -->
     <section class="section faq-section-grid" id="faq-section">
       <h2 class="faq-grid-title">Questions fréquentes</h2>
 
@@ -283,42 +384,100 @@
         </div>
 
         <div class="faq-card">
-          <h3>Dois-je m'inscrire ?</h3>
-          <p>Non. La lecture, la recherche et Ma liste fonctionnent dans le navigateur. Ma liste est enregistrée sur votre appareil.</p>
+          <h3>Comment fonctionne la reprise de lecture ?</h3>
+          <p>Dès que vous regardez une vidéo, votre position est automatiquement mémorisée. Vous pouvez reprendre la lecture au moment exact sur tout appareil.</p>
         </div>
 
         <div class="faq-card">
           <h3>Quelles langues sont disponibles ?</h3>
-          <p>De nombreux titres sont proposés en français (VF) ou en version originale sous-titrée (VOSTFR) selon leur source.</p>
+          <p>De nombreux titres sont proposés en français (VF) ou en version originale sous-titrée (VOSTFR) avec choix de serveurs multiples.</p>
         </div>
 
         <div class="faq-card">
-          <h3>Est-ce que SpaceFlix héberge les vidéos ?</h3>
-          <p>Non. SpaceFlix est une interface de catalogue et de lecture. Les fichiers vidéo sont diffusés en continu depuis des sources tierces. Leur disponibilité peut changer sans préavis.</p>
+          <h3>Comment lancer un film ou une série ?</h3>
+          <p>Cliquez simplement sur l'affiche du titre qui vous intéresse pour ouvrir immédiatement le lecteur vidéo haute définition et choisir votre serveur de streaming.</p>
         </div>
       </div>
 
       <div class="faq-footer-note">
-        Pour en savoir plus, consultez la page <a href="a_propos.html" class="red-link">À propos</a> ou lisez la <a href="Confidentialité.html" class="red-link">Politique de confidentialité</a> et <a href="Conditions.html" class="red-link">les Conditions d'utilisation</a>.
+        Pour en savoir plus, consultez la page <a href="about.html" class="red-link">À propos</a> ou lisez la <a href="privacy.html" class="red-link">Politique de confidentialité</a> et <a href="terms.html" class="red-link">les Conditions d'utilisation</a>.
       </div>
     </section>
   </main>
 
-  <!-- STREAM PLAYER MODAL -->
+  <!-- STREAM PLAYER MODAL SUR MESURE (SPACE THEME) -->
   <div class="modal-backdrop" id="player-modal">
     <div class="player-modal-content">
       <button class="modal-close-btn" id="close-player-btn" aria-label="Fermer le lecteur">
         <i class="fa-solid fa-xmark"></i>
       </button>
 
-      <div class="video-container">
-        <iframe id="video-iframe" class="video-iframe" allowfullscreen allow="autoplay; encrypted-media"></iframe>
+      <!-- BANDEAU DE REPRISE DE LECTURE AUTOMATIQUE -->
+      <div class="player-resume-prompt hidden" id="player-resume-banner">
+        <div class="resume-prompt-info">
+          <i class="fa-solid fa-clock-rotate-left resume-icon-pulse"></i>
+          <span>Reprendre la lecture là où vous vous étiez arrêté (<strong id="resume-time-text">00:00</strong>) ?</span>
+        </div>
+        <div class="resume-prompt-btns">
+          <button class="btn-resume-action btn-resume-yes" id="btn-resume-accept">
+            <i class="fa-solid fa-play"></i> Reprendre
+          </button>
+          <button class="btn-resume-action btn-resume-no" id="btn-resume-decline">
+            <i class="fa-solid fa-rotate-left"></i> Du début
+          </button>
+        </div>
+      </div>
+
+      <!-- LECTEUR VIDÉO PRINCIPAL -->
+      <div class="video-container" id="video-container-wrap">
+        <iframe 
+          id="video-iframe" 
+          class="video-iframe" 
+          allowfullscreen 
+          webkitallowfullscreen="true" 
+          mozallowfullscreen="true" 
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen" 
+          frameborder="0" 
+          scrolling="no">
+        </iframe>
+      </div>
+
+      <!-- BARRE D'OUTILS & RACCOURCIS DU LECTEUR -->
+      <div class="player-custom-toolbar">
+        <div class="toolbar-left">
+          <button class="custom-tool-btn" id="btn-reload-stream" title="Recharger le flux vidéo">
+            <i class="fa-solid fa-rotate"></i> <span>Actualiser</span>
+          </button>
+          <a class="custom-tool-btn" id="btn-open-external-stream" href="#" target="_blank" rel="noopener noreferrer" title="Ouvrir le lecteur dans un nouvel onglet" style="text-decoration: none;">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i> <span>Nouvel onglet</span>
+          </a>
+          <div class="speed-selector-wrap">
+            <span class="speed-label"><i class="fa-solid fa-gauge-high"></i> Vitesse:</span>
+            <select id="player-speed-select" class="speed-select" title="Vitesse de lecture">
+              <option value="0.75">0.75x</option>
+              <option value="1" selected>1.0x (Normale)</option>
+              <option value="1.25">1.25x</option>
+              <option value="1.5">1.5x</option>
+              <option value="2">2.0x</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="toolbar-right">
+          <button class="custom-tool-btn" id="btn-theater-mode" title="Agrandir / Mode Cinéma">
+            <i class="fa-solid fa-expand"></i> <span>Mode Large</span>
+          </button>
+          <button class="custom-tool-btn" id="btn-shortcuts-info" title="Voir les raccourcis clavier">
+            <i class="fa-regular fa-keyboard"></i> <span>Raccourcis</span>
+          </button>
+        </div>
       </div>
 
       <div class="player-details-body">
+        <!-- SELECTEUR MULTI-SERVEURS -->
         <div class="server-selector">
-          <span style="font-size: 0.85rem; font-weight: 600; color: var(--text-muted); margin-right: 0.5rem;">
-            <i class="fa-solid fa-server"></i> Serveurs :
+          <span style="font-size: 0.85rem; font-weight: 700; color: #ff3344; margin-right: 0.5rem; display: flex; align-items: center; gap: 6px;">
+            <i class="fa-solid fa-server"></i> Serveurs de Streaming :
           </span>
           <div id="server-buttons-container" style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
             <!-- Boutons de serveurs vidéo -->
@@ -328,7 +487,7 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
           <div>
             <h2 id="modal-title" style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; margin-bottom: 0.4rem;">Titre</h2>
-            <div style="display: flex; gap: 0.8rem; font-size: 0.85rem; color: var(--text-muted); align-items: center;">
+            <div style="display: flex; gap: 0.8rem; font-size: 0.85rem; color: var(--text-muted); align-items: center; flex-wrap: wrap;">
               <span id="modal-year">2024</span>
               <span>•</span>
               <span id="modal-rating" style="color: #fbbf24; font-weight: 700;"><i class="fa-solid fa-star"></i> 8.6</span>
@@ -338,9 +497,14 @@
             </div>
           </div>
 
-          <button class="btn-secondary" id="modal-fav-btn">
-            <i class="fa-regular fa-bookmark"></i> <span id="modal-fav-text">Ajouter à ma liste</span>
-          </button>
+          <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            <button class="btn-secondary" id="modal-download-btn" title="Télécharger le film ou l'épisode">
+              <i class="fa-solid fa-download"></i> <span id="modal-download-text">Télécharger</span>
+            </button>
+            <button class="btn-secondary" id="modal-fav-btn">
+              <i class="fa-regular fa-bookmark"></i> <span id="modal-fav-text">Ajouter à ma liste</span>
+            </button>
+          </div>
         </div>
 
         <p id="modal-synopsis" style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">Synopsis...</p>
@@ -348,7 +512,7 @@
         <!-- SÉLECTEUR DE SAISONS ET ÉPISODES (SI SÉRIE) -->
         <div id="series-episodes-wrapper" style="display: none; border-top: 1px solid var(--border-glass); padding-top: 1.2rem; margin-top: 1rem;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-            <h3 style="font-size: 1.2rem; font-weight: 700;">Épisodes</h3>
+            <h3 style="font-size: 1.2rem; font-weight: 700;">Épisodes Disponibles</h3>
             <select id="season-select" style="background: rgba(255,255,255,0.08); color: #fff; border: 1px solid var(--border-glass); padding: 0.4rem 1rem; border-radius: 8px; font-weight: 600; outline: none;">
               <!-- Options de saisons -->
             </select>
@@ -357,6 +521,84 @@
             <!-- Grille des épisodes -->
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE TÉLÉCHARGEMENT DE CONTENU -->
+  <div class="info-modal-backdrop hidden" id="download-modal">
+    <div class="info-modal-card" style="max-width: 540px;">
+      <button class="info-modal-close" id="close-download-modal-btn" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+      <div class="info-modal-header">
+        <span class="info-modal-badge">— SPACEFLIX TÉLÉCHARGEMENT</span>
+        <h2 class="info-modal-title" id="download-media-title">Télécharger le média</h2>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.2rem;" id="download-media-subtitle">
+        Sélectionnez votre méthode de téléchargement pour enregistrer ce contenu et le regarder hors-ligne.
+      </p>
+
+      <div class="download-sources-list" id="download-sources-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <!-- Généré dynamiquement par JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL RACCOURCIS CLAVIER -->
+  <div class="info-modal-backdrop hidden" id="shortcuts-modal">
+    <div class="info-modal-card" style="max-width: 480px;">
+      <button class="info-modal-close" id="close-shortcuts-modal-btn" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+      <div class="info-modal-header">
+        <span class="info-modal-badge">— SPACEFLIX COMMANDES</span>
+        <h2 class="info-modal-title">Raccourcis Clavier du Lecteur</h2>
+      </div>
+      <div class="shortcuts-list" style="padding: 1rem 0;">
+        <div class="shortcut-item"><kbd>Espace</kbd> <span>Lecture / Pause</span></div>
+        <div class="shortcut-item"><kbd>→</kbd> <span>Avancer de 10 secondes</span></div>
+        <div class="shortcut-item"><kbd>←</kbd> <span>Reculer de 10 secondes</span></div>
+        <div class="shortcut-item"><kbd>F</kbd> <span>Activer / Quitter le plein écran</span></div>
+        <div class="shortcut-item"><kbd>M</kbd> <span>Couper / Activer le son (Muet)</span></div>
+        <div class="shortcut-item"><kbd>0 - 9</kbd> <span>Naviguer à 0% - 90% du média</span></div>
+        <div class="shortcut-item"><kbd>Échap</kbd> <span>Fermer le lecteur</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL SCRIPT SQL SUPABASE (POUR FACILITER LA COPIE) -->
+  <div class="info-modal-backdrop hidden" id="sql-modal">
+    <div class="info-modal-card" style="max-width: 680px;">
+      <button class="info-modal-close" id="close-sql-modal-btn" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+      <div class="info-modal-header">
+        <span class="info-modal-badge">— SUPABASE SQL EDITOR</span>
+        <h2 class="info-modal-title">Script SQL pour Reprise & Authentification</h2>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+        Copiez ce script et collez-le dans <strong>Supabase &gt; SQL Editor &gt; New Query &gt; Run</strong> pour configurer la base de données de reprise de lecture, profils, favoris et historique.
+      </p>
+      <div class="sql-code-box">
+        <button class="btn-copy-sql" id="btn-copy-sql-code"><i class="fa-regular fa-copy"></i> Copier le SQL</button>
+        <pre><code id="sql-code-display">-- Table Reprise de lecture & Historique
+CREATE TABLE IF NOT EXISTS public.user_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    media_id TEXT NOT NULL,
+    media_title VARCHAR(255),
+    media_type VARCHAR(20) DEFAULT 'movie',
+    poster_url TEXT,
+    season_number INT DEFAULT 1,
+    episode_number INT DEFAULT 1,
+    episode_title VARCHAR(255),
+    current_time_seconds NUMERIC(10, 2) DEFAULT 0,
+    duration_seconds NUMERIC(10, 2) DEFAULT 0,
+    progress_percent INT DEFAULT 0,
+    completed BOOLEAN DEFAULT false,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_user_media_playback UNIQUE(user_id, media_id, season_number, episode_number)
+);
+
+ALTER TABLE public.user_history ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage history" 
+ON public.user_history FOR ALL USING (auth.uid() = user_id);</code></pre>
       </div>
     </div>
   </div>
@@ -371,10 +613,10 @@
           <span class="sc-logo-name">SpaceFlix</span>
         </div>
         <p class="sc-brand-desc">
-          La plateforme moderne de streaming HD gratuit pour accélérer votre divertissement et regarder vos films & séries préférés sans pub ni abonnement.
+          La plateforme moderne de streaming HD gratuit avec reprise de lecture automatique pour regarder vos films & séries préférés en VF/VOSTFR.
         </p>
 
-        <!-- DEVELOPER CARD BOX (EXACT MATCH SCREENSHOT) -->
+        <!-- DEVELOPER CARD BOX -->
         <div class="sc-dev-card">
           <div class="sc-dev-tag">
             <i class="fa-solid fa-code"></i> DÉVELOPPÉ AVEC PASSION PAR
@@ -417,11 +659,6 @@
               <i class="fa-regular fa-envelope sc-eco-icon"></i> Email (ogspacetech@gmail.com)
             </a>
           </li>
-          <li>
-            <a href="https://wa.me/50946966290" target="_blank">
-              <i class="fa-solid fa-users sc-eco-icon"></i> Groupe WhatsApp Officiel
-            </a>
-          </li>
         </ul>
       </div>
 
@@ -438,11 +675,13 @@
             <i class="fa-solid fa-bolt sc-pill-icon"></i> Multi-Serveurs HD VF/VOSTFR
           </div>
           <div class="sc-pill-badge">
-            <i class="fa-solid fa-film sc-pill-icon"></i> Catalogue Mis à Jour 24/7
+            <i class="fa-solid fa-clock-rotate-left sc-pill-icon"></i> Reprise de Lecture Auto
           </div>
-          <div class="sc-pill-badge">
-            <i class="fa-solid fa-globe sc-pill-icon"></i> 100% Gratuit & Illimité
-          </div>
+          <a href="/download-zip" style="text-decoration: none;">
+            <div class="sc-pill-badge" style="border-color: rgba(0,242,254,0.4);">
+              <i class="fa-solid fa-download sc-pill-icon" style="color: #00f2fe;"></i> ZIP Téléchargeable
+            </div>
+          </a>
         </div>
       </div>
     </div>
@@ -460,6 +699,8 @@
       </div>
 
       <div class="sc-bottom-right">
+        <a href="/download-zip" style="color: #00f2fe; font-weight: 600;"><i class="fa-solid fa-file-zipper"></i> ZIP Projet</a>
+        <span class="sc-dot">•</span>
         <a href="privacy.html" id="bottom-privacy-btn"><i class="fa-solid fa-user-shield"></i> Confidentialité</a>
         <span class="sc-dot">•</span>
         <a href="terms.html" id="bottom-terms-btn"><i class="fa-solid fa-scale-balanced"></i> Conditions Générales</a>
@@ -474,7 +715,7 @@
 
       <div class="auth-header">
         <h2 class="auth-title" id="auth-modal-title">Espace Membre SpaceFlix</h2>
-        <p class="auth-subtitle" id="auth-modal-subtitle">Connectez-vous pour synchroniser vos favoris et vos préférences.</p>
+        <p class="auth-subtitle" id="auth-modal-subtitle">Connectez-vous pour synchroniser vos favoris et la reprise de lecture sur tous vos appareils.</p>
       </div>
 
       <div class="auth-tabs">
@@ -527,37 +768,6 @@
       </form>
     </div>
   </div>
-
-  <!-- MODAL INFORMATIONS / LÉGAL (À PROPOS, PRIVACY, TERMS) -->
-  <div class="info-modal-backdrop hidden" id="info-modal">
-    <div class="info-modal-card">
-      <button class="info-modal-close" id="close-info-modal-btn" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
-
-      <div class="info-modal-header">
-        <span class="info-modal-badge" id="info-modal-badge">— SPACEFLIX INFORMATIONS</span>
-        <h2 class="info-modal-title" id="info-modal-title">À Propos</h2>
-      </div>
-
-      <div class="info-modal-tabs">
-        <button class="info-tab-btn active" id="info-tab-about">À Propos</button>
-        <button class="info-tab-btn" id="info-tab-privacy">Confidentialité</button>
-        <button class="info-tab-btn" id="info-tab-terms">Conditions</button>
-      </div>
-
-      <div class="info-modal-body" id="info-modal-body">
-        <!-- Contenu dynamique inséré par JS -->
-      </div>
-    </div>
-  </div>
-
-  <!-- SUPABASE BACKEND CONFIGURATION -->
-  <script>
-    window.SPACE_FLIX_CONFIG = {
-      SUPABASE_URL: 'https://gfjyywtxshebhteaxxtf.supabase.co',
-      SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdmanl5d3R4c2hlYmh0ZWF4eHRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNTc4NjYsImV4cCI6MjEwMjYzMzg2Nn0.G8EwY9CNUA6fW3d8XqKSjM5qhE8-67qgcUsp0BVPHP0'
-    };
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 
   <!-- APPLICATION LOGIC SCRIPT -->
   <script type="module" src="src/app/main.js"></script>

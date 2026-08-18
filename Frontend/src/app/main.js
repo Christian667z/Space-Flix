@@ -1,25 +1,53 @@
 /**
  * Space Flix — Application JavaScript Principale
- * Gère le catalogue, la navigation, le moteur de recherche, le lecteur de streaming vidéo HD,
- * les cartes d'accès rapide, la FAQ et la sauvegarde locale de "Ma Liste" (Favoris).
+ * Gère le catalogue TMDB/Supabase, le carrousel Hero immersif,
+ * le lecteur vidéo sur mesure avec bandes-annonces TMDB YouTube,
+ * la reprise de lecture automatique et l'authentification Supabase (Email/Pass & Google OAuth).
  */
 
 import { SupabaseService, supabaseClient } from '../lib/supabaseClient.js';
 import { TMDBService, getFallbackPoster } from '../lib/tmdbClient.js';
 import { GENRES_LIST, INITIAL_MEDIA } from '../lib/data.js';
 
-// État de l'application
+// État Global de l'application
 const state = {
   currentNav: 'home',
   currentGenre: 'Tous',
   currentSearch: '',
   mediaList: [...INITIAL_MEDIA],
   favorites: [],
+  continueWatchingList: [],
+  
+  // Hero Carousel
+  heroFeaturedList: [],
+  heroIndex: 0,
+  heroInterval: null,
   heroMedia: null,
+
+  // Player State
   activeMedia: null,
   activeServerIndex: 0,
   activeSeason: 1,
-  activeEpisodeNumber: 1
+  activeEpisodeNumber: 1,
+  activeEpisodeTitle: '',
+  playerMode: 'stream', // 'stream' | 'trailer'
+  mediaVideos: [],
+  playbackTimer: null,
+  playbackSeconds: 0,
+  playbackDuration: 7200, // 2h par défaut
+  isPlaying: true,
+  isTheaterMode: false,
+
+  // Filtres avancés & Pagination (Style Handyflix)
+  filterType: 'all',
+  filterGenre: 'Tous',
+  filterYear: 'all',
+  filterLang: 'all',
+  filterSort: 'popularity.desc',
+  filterPage: 1,
+  filterMediaList: [],
+  isFilterActive: false,
+  isLoadingFilterPage: false
 };
 
 // Sélecteurs DOM
@@ -28,37 +56,89 @@ const DOM = {
   announcementBar: document.getElementById('announcement-bar'),
   closeAnnouncementBtn: document.getElementById('close-announcement-btn'),
   searchInput: document.getElementById('search-input'),
+  searchTriggerBtn: document.getElementById('search-trigger-btn'),
+  instantSearchDropdown: document.getElementById('instant-search-dropdown'),
+  instantSearchResults: document.getElementById('instant-search-results'),
+  closeInstantSearchBtn: document.getElementById('close-instant-search-btn'),
+  instantSearchCount: document.getElementById('instant-search-count'),
   navLinks: document.querySelectorAll('.nav-link'),
   genresBar: document.getElementById('genres-bar'),
   categoryHub: document.getElementById('category-hub'),
   aboutHero: document.getElementById('about-hero'),
   hubSearchCard: document.getElementById('hub-search-card'),
   faqSection: document.getElementById('faq-section'),
+
+  // Filtres Avancés & Résultats
+  advancedFiltersSection: document.getElementById('advanced-filters-section'),
+  filterTypeSelect: document.getElementById('filter-type-select'),
+  filterGenreSelect: document.getElementById('filter-genre-select'),
+  filterYearSelect: document.getElementById('filter-year-select'),
+  filterLangSelect: document.getElementById('filter-lang-select'),
+  filterSortSelect: document.getElementById('filter-sort-select'),
+  btnResetFilters: document.getElementById('btn-reset-filters'),
+  filteredResultsWrapper: document.getElementById('filtered-results-wrapper'),
+  filteredCatalogGrid: document.getElementById('filtered-catalog-grid'),
+  filteredCatalogTitle: document.getElementById('filtered-catalog-title'),
+  filteredCatalogBadge: document.getElementById('filtered-catalog-badge'),
+  btnLoadMoreCatalog: document.getElementById('btn-load-more-catalog'),
+  loadMoreSpinner: document.getElementById('load-more-spinner'),
+  loadMoreText: document.getElementById('load-more-text'),
   
-  // Sections
+  // Sections Catalogues
   heroSection: document.getElementById('hero-section'),
   heroBackdrop: document.getElementById('hero-backdrop'),
   heroTitle: document.getElementById('hero-title'),
   heroSynopsis: document.getElementById('hero-synopsis'),
-  heroQuality: document.getElementById('hero-quality'),
-  heroLang: document.getElementById('hero-lang'),
+  heroRating: document.getElementById('hero-rating'),
+  heroYear: document.getElementById('hero-year'),
+  heroType: document.getElementById('hero-type'),
+  heroGenres: document.getElementById('hero-genres'),
+  heroPoster: document.getElementById('hero-poster'),
+  heroPosterWrapper: document.getElementById('hero-poster-wrapper'),
   heroPlayBtn: document.getElementById('hero-play-btn'),
   heroFavBtn: document.getElementById('hero-fav-btn'),
-  heroFavText: document.getElementById('hero-fav-text'),
+  heroTrailerBtn: document.getElementById('hero-trailer-btn'),
+  heroPrevBtn: document.getElementById('hero-prev-btn'),
+  heroNextBtn: document.getElementById('hero-next-btn'),
+  heroCarouselDots: document.getElementById('hero-carousel-dots'),
 
+  continueWatchingSection: document.getElementById('continue-watching-section'),
+  continueWatchingGrid: document.getElementById('continue-watching-grid'),
   trendingSection: document.getElementById('trending-section'),
   trendingGrid: document.getElementById('trending-grid'),
   moviesSection: document.getElementById('movies-section'),
   moviesGrid: document.getElementById('movies-grid'),
   tvSection: document.getElementById('tv-section'),
   tvGrid: document.getElementById('tv-grid'),
+  latestSection: document.getElementById('latest-section'),
+  latestGrid: document.getElementById('latest-grid'),
   favoritesSection: document.getElementById('favorites-section'),
   favoritesGrid: document.getElementById('favorites-grid'),
 
-  // Player Modal
+  // Lecteur Vidéo Modal Sur Mesure
   playerModal: document.getElementById('player-modal'),
   closePlayerBtn: document.getElementById('close-player-btn'),
+  tabStreamFull: document.getElementById('tab-stream-full'),
+  tabStreamTrailer: document.getElementById('tab-stream-trailer'),
+  videoContainerWrap: document.getElementById('video-container-wrap'),
   videoIframe: document.getElementById('video-iframe'),
+  playerErrorOverlay: document.getElementById('player-error-overlay'),
+  btnErrorSwitchServer: document.getElementById('btn-error-switch-server'),
+  btnErrorWatchTrailer: document.getElementById('btn-error-watch-trailer'),
+  playerResumeBanner: document.getElementById('player-resume-banner'),
+  resumeTimeText: document.getElementById('resume-time-text'),
+  btnResumeAccept: document.getElementById('btn-resume-accept'),
+  btnResumeDecline: document.getElementById('btn-resume-decline'),
+  btnRewind10: document.getElementById('btn-rewind-10'),
+  btnTogglePlay: document.getElementById('btn-toggle-play'),
+  playPauseIcon: document.getElementById('play-pause-icon'),
+  playPauseLabel: document.getElementById('play-pause-label'),
+  btnForward10: document.getElementById('btn-forward-10'),
+  btnReloadStream: document.getElementById('btn-reload-stream'),
+  btnFullscreenToggle: document.getElementById('btn-fullscreen-toggle'),
+  btnTheaterMode: document.getElementById('btn-theater-mode'),
+  btnShortcutsInfo: document.getElementById('btn-shortcuts-info'),
+  playerSpeedSelect: document.getElementById('player-speed-select'),
   serverButtonsContainer: document.getElementById('server-buttons-container'),
   modalTitle: document.getElementById('modal-title'),
   modalYear: document.getElementById('modal-year'),
@@ -66,36 +146,74 @@ const DOM = {
   modalDuration: document.getElementById('modal-duration'),
   modalGenresTags: document.getElementById('modal-genres-tags'),
   modalSynopsis: document.getElementById('modal-synopsis'),
+  modalDownloadBtn: document.getElementById('modal-download-btn'),
+  modalDownloadText: document.getElementById('modal-download-text'),
   modalFavBtn: document.getElementById('modal-fav-btn'),
   modalFavText: document.getElementById('modal-fav-text'),
   seriesEpisodesWrapper: document.getElementById('series-episodes-wrapper'),
   seasonSelect: document.getElementById('season-select'),
-  episodesContainer: document.getElementById('episodes-container')
+  episodesContainer: document.getElementById('episodes-container'),
+
+  // Modals & Download
+  downloadModal: document.getElementById('download-modal'),
+  closeDownloadModalBtn: document.getElementById('close-download-modal-btn'),
+  downloadMediaTitle: document.getElementById('download-media-title'),
+  downloadMediaSubtitle: document.getElementById('download-media-subtitle'),
+  downloadSourcesContainer: document.getElementById('download-sources-container'),
+
+  // Modals & Auth
+  authModal: document.getElementById('auth-modal'),
+  closeAuthBtn: document.getElementById('close-auth-btn'),
+  profileBtn: document.getElementById('profile-btn'),
+  profileDropdown: document.getElementById('profile-dropdown'),
+  tabLoginBtn: document.getElementById('tab-login-btn'),
+  tabSignupBtn: document.getElementById('tab-signup-btn'),
+  nameFieldGroup: document.getElementById('name-field-group'),
+  authSubmitBtn: document.getElementById('auth-submit-btn'),
+  authModalTitle: document.getElementById('auth-modal-title'),
+  authModalSubtitle: document.getElementById('auth-modal-subtitle'),
+  googleLoginBtn: document.getElementById('google-login-btn'),
+  authForm: document.getElementById('auth-form'),
+  authErrorMsg: document.getElementById('auth-error-msg'),
+  togglePwdBtn: document.getElementById('toggle-pwd-btn'),
+  authPwdInput: document.getElementById('auth-password'),
+  dropdownLoginTrigger: document.getElementById('dropdown-login-trigger'),
+  dropdownLogoutBtn: document.getElementById('dropdown-logout-btn'),
+  dropdownLogoutDivider: document.getElementById('dropdown-logout-divider'),
+  dropdownActionLabel: document.getElementById('dropdown-action-label'),
+  dropdownSqlBtn: document.getElementById('dropdown-sql-btn'),
+
+  shortcutsModal: document.getElementById('shortcuts-modal'),
+  closeShortcutsBtn: document.getElementById('close-shortcuts-modal-btn'),
+  sqlModal: document.getElementById('sql-modal'),
+  closeSqlBtn: document.getElementById('close-sql-modal-btn'),
+  btnCopySqlCode: document.getElementById('btn-copy-sql-code'),
+  sqlCodeDisplay: document.getElementById('sql-code-display')
 };
 
-// --- AUTH SERVICE (CONNECTÉ 100% SUR SUPABASE AUTH) ---
+// --- SERVICE AUTHENTIFICATION (SUPABASE AUTH & GOOGLE OAUTH) ---
 const AUTH_ERROR_MESSAGES = {
   'Invalid login credentials': 'E-mail ou mot de passe incorrect.',
   'User already registered': 'Un compte existe déjà avec cet e-mail.',
   'Email not confirmed': "Veuillez confirmer votre e-mail avant de vous connecter.",
   'Password should be at least 6 characters': 'Le mot de passe doit contenir au moins 6 caractères.',
-  'Unsupported provider: provider is not enabled': "La connexion Google n'est pas encore activée sur ce projet Supabase."
+  'Unsupported provider: provider is not enabled': "La connexion Google n'est pas encore activée sur le projet Supabase."
 };
 
 function translateAuthError(message) {
-  if (!message) return 'Une erreur est survenue.';
+  if (!message) return 'Une erreur est survenue lors de la connexion.';
   for (const [key, translation] of Object.entries(AUTH_ERROR_MESSAGES)) {
     if (message.includes(key)) return translation;
   }
   return message;
 }
 
-const AuthService = {
+export const AuthService = {
   currentUser: null,
 
   toDisplayUser(supabaseUser) {
     if (!supabaseUser) return null;
-    const rawName = supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || supabaseUser.email.split('@')[0];
+    const rawName = supabaseUser.user_metadata?.full_name || supabaseUser.user_metadata?.name || supabaseUser.email?.split('@')[0] || 'Membre';
     const displayName = rawName.charAt(0).toUpperCase() + rawName.slice(1);
     return {
       id: supabaseUser.id,
@@ -116,20 +234,24 @@ const AuthService = {
         const { data: { user } } = await supabaseClient.auth.getUser();
         this.currentUser = this.toDisplayUser(user);
       } catch (e) {
-        console.warn("User get error:", e);
+        console.warn("Info session auth:", e.message);
       }
 
-      supabaseClient.auth.onAuthStateChange(async (event, session) => {
+      supabaseClient.auth.onAuthStateChange(async (_event, session) => {
         this.currentUser = this.toDisplayUser(session?.user);
-        if (onChange) await onChange(this.currentUser, event);
+        if (onChange) await onChange(this.currentUser);
       });
     }
     return this.currentUser;
   },
 
   async login(email, password) {
-    if (!email || !password) throw new Error('Veuillez remplir tous les champs.');
-    if (!supabaseClient) throw new Error('Client Supabase non initialisé.');
+    if (!email || !password) throw new Error('Veuillez renseigner votre e-mail et votre mot de passe.');
+    if (!supabaseClient) {
+      const mockUser = { id: 'guest-' + Date.now(), email, user_metadata: { full_name: email.split('@')[0] } };
+      this.currentUser = this.toDisplayUser(mockUser);
+      return this.currentUser;
+    }
 
     const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
     if (error) throw new Error(translateAuthError(error.message));
@@ -138,15 +260,19 @@ const AuthService = {
   },
 
   async signup(name, email, password) {
-    if (!email || !password) throw new Error('Veuillez remplir tous les champs.');
+    if (!email || !password) throw new Error('Veuillez remplir tous les champs obligatoires.');
     if (password.length < 6) throw new Error('Le mot de passe doit contenir au moins 6 caractères.');
-    if (!supabaseClient) throw new Error('Client Supabase non initialisé.');
+    if (!supabaseClient) {
+      const mockUser = { id: 'guest-' + Date.now(), email, user_metadata: { full_name: name.trim() || email.split('@')[0] } };
+      this.currentUser = this.toDisplayUser(mockUser);
+      return this.currentUser;
+    }
 
     const { data, error } = await supabaseClient.auth.signUp({
       email,
       password,
       options: {
-        data: { full_name: name.trim() }
+        data: { full_name: name.trim() || email.split('@')[0] }
       }
     });
     if (error) throw new Error(translateAuthError(error.message));
@@ -155,7 +281,7 @@ const AuthService = {
   },
 
   async loginWithGoogle() {
-    if (!supabaseClient) throw new Error('Client Supabase non initialisé.');
+    if (!supabaseClient) throw new Error('Supabase client non disponible.');
     const { data, error } = await supabaseClient.auth.signInWithOAuth({
       provider: 'google',
       options: {
@@ -168,51 +294,59 @@ const AuthService = {
 
   async logout() {
     if (supabaseClient) {
-      await supabaseClient.auth.signOut();
+      try {
+        await supabaseClient.auth.signOut();
+      } catch (e) {
+        console.warn("Signout info:", e.message);
+      }
     }
     this.currentUser = null;
   }
 };
 
-// --- INITIALISATION ---
+// --- INITIALISATION PRINCIPALE ---
 document.addEventListener('DOMContentLoaded', async () => {
   initNavbarScroll();
   renderGenresBar();
 
-  // Rendu immédiat des médias locaux avant tout appel réseau
+  // 1. Initialiser le Hero avec les données locales
+  updateHeroFeaturedList(state.mediaList);
   renderAllSections();
-  if (state.mediaList.length > 0) {
-    const featured = state.mediaList.find(m => m.is_featured) || state.mediaList[0];
-    renderHero(featured);
+
+  // 2. Setup des écouteurs d'événements
+  setupEventListeners();
+
+  // 3. Initialisation de la session Supabase
+  try {
+    await AuthService.init(async (user) => {
+      updateAuthHeaderUI();
+      if (user) {
+        closeAuthModal();
+      }
+      await loadUserData();
+      renderAllSections();
+    });
+  } catch (err) {
+    console.warn("Auth init warning:", err.message);
   }
 
-  // Écoute non-bloquante de la session Supabase Auth
-  AuthService.init(async (user) => {
-    updateAuthHeaderUI();
-    if (user) {
-      closeAuthModal();
-    }
-    state.favorites = await SupabaseService.getFavorites();
-    renderAllSections();
-  }).catch(err => console.warn("Attention initialisation Auth:", err));
-
+  updateAuthHeaderUI();
   await loadUserData();
   await refreshCatalog();
-  setupEventListeners();
 });
 
-// Gère le scroll de la barre de navigation
+// Scroll fluide de la barre de navigation
 function initNavbarScroll() {
   window.addEventListener('scroll', () => {
-    if (window.scrollY > 40) {
-      if (DOM.navbar) DOM.navbar.classList.add('scrolled');
+    if (window.scrollY > 30) {
+      DOM.navbar?.classList.add('scrolled');
     } else {
-      if (DOM.navbar) DOM.navbar.classList.remove('scrolled');
+      DOM.navbar?.classList.remove('scrolled');
     }
   });
 }
 
-// Rend la barre de filtres par genre (Pill Badges)
+// Rend la barre de filtres de genres
 function renderGenresBar() {
   if (!DOM.genresBar) return;
   DOM.genresBar.innerHTML = GENRES_LIST.map(genre => `
@@ -231,213 +365,322 @@ function renderGenresBar() {
   });
 }
 
-// Charge la liste des favoris de l'utilisateur (Local Storage / Supabase)
+// Charge favoris et historique
 async function loadUserData() {
-  state.favorites = await SupabaseService.getFavorites();
+  try {
+    const [favs, continueList] = await Promise.all([
+      SupabaseService.getFavorites(),
+      SupabaseService.getAllContinueWatching()
+    ]);
+    state.favorites = favs || [];
+    state.continueWatchingList = continueList || [];
+    renderContinueWatchingSection();
+  } catch (err) {
+    console.warn("Chargement données utilisateur:", err.message);
+  }
 }
 
-// Recharge et filtre le catalogue selon l'état actuel (Supabase + TMDB API)
+// Formate le temps
+function formatTime(seconds = 0) {
+  const s = Math.floor(seconds);
+  const hrs = Math.floor(s / 3600);
+  const mins = Math.floor((s % 3600) / 60);
+  const secs = s % 60;
+  if (hrs > 0) {
+    return `${hrs}h ${mins < 10 ? '0' : ''}${mins}m`;
+  }
+  return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+}
+
+// Rend la section "Reprendre la lecture"
+function renderContinueWatchingSection() {
+  if (!DOM.continueWatchingSection || !DOM.continueWatchingGrid) return;
+
+  if (state.continueWatchingList.length === 0 || state.currentNav === 'favorites') {
+    DOM.continueWatchingSection.style.display = 'none';
+    return;
+  }
+
+  DOM.continueWatchingSection.style.display = 'block';
+  DOM.continueWatchingGrid.innerHTML = state.continueWatchingList.map(item => {
+    const title = (item.media_title || 'Titre').replace(/"/g, '&quot;');
+    const timeFormatted = formatTime(item.current_time_seconds);
+    const percent = Math.min(100, Math.max(5, item.progress_percent || 10));
+    const subLabel = item.media_type === 'tv' 
+      ? `S${item.season_number}:E${item.episode_number} • ${item.episode_title || 'Épisode'}`
+      : `Film • Reprendre à ${timeFormatted}`;
+
+    const poster = item.poster_url || getFallbackPoster(title, '2026');
+
+    return `
+      <div class="continue-card" data-media-id="${item.media_id}" data-season="${item.season_number || 1}" data-episode="${item.episode_number || 1}">
+        <div class="continue-poster-wrap">
+          <img src="${poster}" alt="${title}" class="continue-poster-img" loading="lazy" onerror="this.onerror=null; this.src='${getFallbackPoster(title, '2026')}'">
+          <button class="continue-play-overlay" title="Reprendre la lecture">
+            <i class="fa-solid fa-play"></i>
+          </button>
+          <div class="continue-progress-bar-wrap">
+            <div class="continue-progress-bar-fill" style="width: ${percent}%;"></div>
+          </div>
+          <button class="continue-remove-btn" title="Supprimer de l'historique" data-remove-id="${item.media_id}" data-remove-season="${item.season_number || 1}" data-remove-episode="${item.episode_number || 1}">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+        <div class="continue-details">
+          <h4 class="continue-title">${title}</h4>
+          <span class="continue-time-tag">${subLabel}</span>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Gestion du clic pour reprendre
+  DOM.continueWatchingGrid.querySelectorAll('.continue-card').forEach(card => {
+    card.addEventListener('click', async (e) => {
+      if (e.target.closest('.continue-remove-btn')) return;
+      const mediaId = card.getAttribute('data-media-id');
+      const season = parseInt(card.getAttribute('data-season') || '1');
+      const episode = parseInt(card.getAttribute('data-episode') || '1');
+
+      let media = state.mediaList.find(m => String(m.id) === String(mediaId));
+      if (!media) {
+        media = await SupabaseService.getMediaById(mediaId);
+      }
+      if (media) {
+        openPlayerModal(media, season, episode, true);
+      }
+    });
+  });
+
+  // Gestion de la suppression d'un élément d'historique
+  DOM.continueWatchingGrid.querySelectorAll('.continue-remove-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      e.stopPropagation();
+      const mediaId = btn.getAttribute('data-remove-id');
+      const season = parseInt(btn.getAttribute('data-remove-season') || '1');
+      const episode = parseInt(btn.getAttribute('data-remove-episode') || '1');
+
+      await SupabaseService.removePlaybackProgress(mediaId, season, episode);
+      state.continueWatchingList = state.continueWatchingList.filter(
+        item => !(item.media_id === String(mediaId) && item.season_number === season && item.episode_number === episode)
+      );
+      renderContinueWatchingSection();
+    });
+  });
+}
+
+// Rafraîchit le catalogue depuis Supabase et TMDB
 async function refreshCatalog() {
   try {
-    // 1. Rendu d'urgence immédiat pour garantir qu'aucun écran noir n'apparaît
-    let list = [...INITIAL_MEDIA];
-    state.mediaList = list;
-    renderAllSections();
-    const initialFeatured = list.find(m => m.is_featured) || list[0];
-    if (initialFeatured) {
-      renderHero(initialFeatured);
-    }
-
-    // 2. Récupération dynamique depuis Supabase si configuré
-    const dbList = await SupabaseService.getMediaList({
-      search: state.currentSearch,
-      genre: state.currentGenre
+    let list = await SupabaseService.getMediaList({
+      search: state.currentSearch || null
     });
 
-    if (dbList && dbList.length > 0) {
-      const existingIds = new Set(list.map(m => m.id));
-      const newItems = dbList.filter(m => !existingIds.has(m.id));
-      list = [...list, ...newItems];
+    if (state.currentGenre && state.currentGenre !== 'Tous') {
+      const gLower = state.currentGenre.toLowerCase();
+      list = list.filter(item => item.genres && Array.isArray(item.genres) && 
+        item.genres.some(g => g.toLowerCase() === gLower || (gLower.includes('sci') && g.toLowerCase().includes('sci')))
+      );
     }
 
-    // 3. Si recherche active, interroger l'API TMDB
     if (state.currentSearch) {
-      try {
-        const tmdbResults = await TMDBService.searchMedia(state.currentSearch);
-        if (tmdbResults && tmdbResults.length > 0) {
-          const existingIds = new Set(list.map(m => m.id));
-          const newItems = tmdbResults.filter(m => !existingIds.has(m.id));
-          list = [...list, ...newItems];
-        }
-      } catch (e) {
-        console.warn("Recherche TMDB non disponible:", e);
-      }
-    } else if (state.currentGenre && state.currentGenre !== 'Tous') {
-      // Si un genre spécifique est sélectionné (Action, Sci-Fi, Comédie, etc.)
-      try {
-        const genreMedia = await TMDBService.getMediaByGenre(state.currentGenre);
-        if (genreMedia && genreMedia.length > 0) {
-          const existingIds = new Set(list.map(m => m.id));
-          const newItems = genreMedia.filter(m => !existingIds.has(m.id));
-          list = [...list, ...newItems];
-        }
-      } catch (e) {
-        console.warn(`Erreur TMDB genre ${state.currentGenre}:`, e);
-      }
-    } else {
-      // Mode Accueil (Tous) : charger les films populaires, séries populaires et tendances de TMDB sans bloquer
-      try {
-        const results = await Promise.allSettled([
-          TMDBService.getTrending('all', 'week'),
-          TMDBService.getPopularMovies(1),
-          TMDBService.getPopularTVShows(1)
-        ]);
-        const tmdbCombined = results
-          .filter(r => r.status === 'fulfilled' && Array.isArray(r.value))
-          .flatMap(r => r.value);
+      const q = state.currentSearch.toLowerCase();
+      list = list.filter(item => 
+        (item.title && item.title.toLowerCase().includes(q)) || 
+        (item.synopsis && item.synopsis.toLowerCase().includes(q))
+      );
+    }
 
-        if (tmdbCombined.length > 0) {
-          const existingIds = new Set(list.map(m => m.id));
-          const newItems = tmdbCombined.filter(m => !existingIds.has(m.id));
-          list = [...list, ...newItems];
+    // Enrichissement TMDB
+    if (list.length < 15 && (!state.currentSearch || state.currentSearch.length > 2)) {
+      TMDBService.getCatalog({
+        genre: state.currentGenre,
+        search: state.currentSearch
+      }).then(tmdbData => {
+        if (tmdbData && tmdbData.length > 0) {
+          const newItems = tmdbData.filter(t => !state.mediaList.some(m => String(m.id) === String(t.id) || m.title === t.title));
+          if (newItems.length > 0) {
+            state.mediaList = [...state.mediaList, ...newItems];
+            updateHeroFeaturedList(state.mediaList);
+            renderAllSections();
+          }
         }
-      } catch (e) {
-        console.warn("Tendances TMDB non disponibles:", e);
-      }
+      }).catch(() => {});
     }
 
     state.mediaList = list;
-
-    const featured = state.mediaList.find(m => m.is_featured) || state.mediaList[0];
-    if (featured) {
-      renderHero(featured);
-    }
-
+    updateHeroFeaturedList(state.mediaList);
     renderAllSections();
   } catch (err) {
-    console.error("Erreur lors de l'actualisation du catalogue:", err);
+    console.error("Erreur actualisation catalogue:", err);
   }
 }
 
-// Global window image error handler for cards
-window.handleCardImageError = function(imgEl, title, year) {
-  imgEl.onerror = null;
-  imgEl.src = getFallbackPoster(title, year);
-};
+// --- GESTION DU HERO CARROUSEL IMMERSIF (5-7 SECONDES) ---
+function updateHeroFeaturedList(list) {
+  if (!list || list.length === 0) return;
+  const featured = list.filter(m => m.is_featured || m.is_trending);
+  state.heroFeaturedList = featured.length >= 3 ? featured.slice(0, 6) : list.slice(0, 6);
+  
+  if (state.heroFeaturedList.length > 0) {
+    if (!state.heroMedia || !state.heroFeaturedList.some(m => String(m.id) === String(state.heroMedia.id))) {
+      state.heroIndex = 0;
+      renderHero(state.heroFeaturedList[0]);
+    }
+    renderHeroCarouselIndicators();
+    startHeroCarousel();
+  }
+}
 
-// Rend la bannière Hero (Compatible API & TMDB)
-async function renderHero(media) {
+function startHeroCarousel() {
+  stopHeroCarousel();
+  if (state.heroFeaturedList.length <= 1) return;
+
+  state.heroInterval = setInterval(() => {
+    state.heroIndex = (state.heroIndex + 1) % state.heroFeaturedList.length;
+    renderHero(state.heroFeaturedList[state.heroIndex]);
+    renderHeroCarouselIndicators();
+  }, 6000);
+}
+
+function stopHeroCarousel() {
+  if (state.heroInterval) {
+    clearInterval(state.heroInterval);
+    state.heroInterval = null;
+  }
+}
+
+function setHeroByIndex(index) {
+  if (index < 0 || index >= state.heroFeaturedList.length) return;
+  state.heroIndex = index;
+  renderHero(state.heroFeaturedList[index]);
+  renderHeroCarouselIndicators();
+  startHeroCarousel();
+}
+
+function renderHeroCarouselIndicators() {
+  if (!DOM.heroCarouselDots || state.heroFeaturedList.length === 0) return;
+
+  DOM.heroCarouselDots.innerHTML = state.heroFeaturedList.map((media, idx) => {
+    const isActive = idx === state.heroIndex;
+    const shortTitle = (media.title || 'Film').replace(/"/g, '&quot;');
+    return `
+      <div class="hero-dot-item ${isActive ? 'active' : ''}" data-index="${idx}" title="${shortTitle}">
+        <span>${idx + 1}. ${shortTitle}</span>
+      </div>
+    `;
+  }).join('');
+
+  DOM.heroCarouselDots.querySelectorAll('.hero-dot-item').forEach(dot => {
+    dot.addEventListener('click', () => {
+      const idx = parseInt(dot.getAttribute('data-index'));
+      setHeroByIndex(idx);
+    });
+  });
+}
+
+// Rend les éléments du Hero avec animation fluide
+function renderHero(media) {
   if (!media) return;
   state.heroMedia = media;
-  
-  // Dynamic Image URL resolver (TMDB or direct URL)
-  const getImageUrl = (path, size = 'w1280') => {
-    if (!path) return '';
-    if (path.startsWith('http://') || path.startsWith('https://') || path.startsWith('data:')) return path;
-    return `https://image.tmdb.org/t/p/${size}${path}`;
-  };
 
-  const titleVal = media.title || media.name || 'Dune: Deuxième Partie';
-  const yearVal = media.release_year || '2024';
-
-  const backdropSrc = getImageUrl(media.backdrop_url || media.backdrop_path || media.poster_url || media.poster_path, 'w1280') || 'https://image.tmdb.org/t/p/original/xJHokMbljvjADYdit5fKSuV0vqv.jpg';
-  const posterSrc = getImageUrl(media.poster_url || media.poster_path || media.backdrop_url || media.backdrop_path, 'w500') || getFallbackPoster(titleVal, yearVal);
-
-  if (DOM.heroBackdrop) {
-    DOM.heroBackdrop.style.display = 'block';
-    DOM.heroBackdrop.onerror = () => {
-      DOM.heroBackdrop.onerror = null;
-      DOM.heroBackdrop.src = 'https://image.tmdb.org/t/p/original/xJHokMbljvjADYdit5fKSuV0vqv.jpg';
-    };
-    DOM.heroBackdrop.src = backdropSrc;
+  const cardEl = DOM.heroSection;
+  if (cardEl) {
+    cardEl.classList.add('animating');
   }
 
-  const heroPosterEl = document.getElementById('hero-poster');
-  const heroPosterWrapper = document.getElementById('hero-poster-wrapper');
-  if (heroPosterEl) {
-    heroPosterEl.onerror = () => {
-      heroPosterEl.onerror = null;
-      heroPosterEl.src = getFallbackPoster(titleVal, yearVal);
-    };
-    heroPosterEl.src = posterSrc;
-    if (heroPosterWrapper) heroPosterWrapper.style.display = 'flex';
-  }
+  const titleVal = media.title || 'Dune: Deuxième Partie';
+  const yearVal = media.release_year || '2026';
+  const backdropSrc = media.backdrop_url || media.poster_url || 'https://image.tmdb.org/t/p/original/xJHokMbljvjADYdit5fKSuV0vqv.jpg';
+  const posterSrc = media.poster_url || getFallbackPoster(titleVal, yearVal);
 
-  if (DOM.heroTitle) DOM.heroTitle.textContent = titleVal;
-  if (DOM.heroSynopsis) DOM.heroSynopsis.textContent = media.synopsis || media.overview || 'Aucun synopsis disponible.';
-  if (DOM.heroQuality) DOM.heroQuality.textContent = '4K UHD';
-  if (DOM.heroLang) DOM.heroLang.textContent = (media.languages || ['VF', 'VOSTFR']).join(' • ');
+  setTimeout(() => {
+    if (DOM.heroBackdrop) {
+      DOM.heroBackdrop.onerror = () => {
+        DOM.heroBackdrop.onerror = null;
+        DOM.heroBackdrop.src = 'https://image.tmdb.org/t/p/original/xJHokMbljvjADYdit5fKSuV0vqv.jpg';
+      };
+      DOM.heroBackdrop.src = backdropSrc;
+    }
 
-  const ratingEl = document.getElementById('hero-rating');
-  const yearEl = document.getElementById('hero-year');
-  const typeEl = document.getElementById('hero-type');
-  const genresEl = document.getElementById('hero-genres');
+    if (DOM.heroPoster) {
+      DOM.heroPoster.onerror = () => {
+        DOM.heroPoster.onerror = null;
+        DOM.heroPoster.src = getFallbackPoster(titleVal, yearVal);
+      };
+      DOM.heroPoster.src = posterSrc;
+    }
 
-  if (ratingEl) ratingEl.innerHTML = `<i class="fa-solid fa-star" style="color:#ffc107;"></i> ${media.rating || '8.5'}`;
-  if (yearEl) yearEl.textContent = yearVal;
-  if (typeEl) typeEl.textContent = media.type === 'movie' ? 'FILM' : 'SÉRIE';
-  if (genresEl) genresEl.textContent = (media.genres || ['Action', 'Sci-Fi']).join(' • ');
+    if (DOM.heroTitle) DOM.heroTitle.textContent = titleVal;
+    if (DOM.heroSynopsis) DOM.heroSynopsis.textContent = media.synopsis || 'Aucun synopsis disponible.';
+    if (DOM.heroRating) DOM.heroRating.innerHTML = `<i class="fa-solid fa-star" style="color: #fbbf24;"></i> ${media.rating || '8.5'}`;
+    if (DOM.heroYear) DOM.heroYear.textContent = yearVal;
+    if (DOM.heroType) DOM.heroType.textContent = media.type === 'movie' ? 'FILM' : 'SÉRIE';
+    if (DOM.heroGenres) DOM.heroGenres.textContent = (media.genres || ['Action', 'Sci-Fi']).join(' • ');
 
-  updateHeroFavButtonState(media.id);
+    updateFavButtonUI(DOM.heroFavBtn, null, state.favorites.some(f => String(f.id) === String(media.id)));
+
+    if (cardEl) {
+      setTimeout(() => cardEl.classList.remove('animating'), 100);
+    }
+  }, 120);
 }
 
-// Rend toutes les sections du catalogue selon le filtre actif
+// Rend toutes les grilles du catalogue
 function renderAllSections() {
-  const latestList = [...state.mediaList].sort((a, b) => b.release_year - a.release_year);
+  const latestList = [...state.mediaList].sort((a, b) => (b.release_year || 0) - (a.release_year || 0));
   const trendingList = state.mediaList.filter(m => m.is_trending);
   const displayTrending = trendingList.length > 0 ? trendingList : state.mediaList.slice(0, 10);
-  const moviesList = state.mediaList.filter(m => m.type === 'movie' || m.type === 'film');
+  const moviesList = state.mediaList.filter(m => m.type === 'movie');
   const displayMovies = moviesList.length > 0 ? moviesList : state.mediaList.filter(m => m.type !== 'tv');
-  const tvList = state.mediaList.filter(m => m.type === 'tv' || m.type === 'series');
+  const tvList = state.mediaList.filter(m => m.type === 'tv');
   const displayTV = tvList.length > 0 ? tvList : state.mediaList.filter(m => m.type === 'tv');
 
-  const latestSection = document.getElementById('latest-section');
-  const latestGrid = document.getElementById('latest-grid');
-
   if (state.currentNav === 'favorites') {
-    if (DOM.heroSection && DOM.heroSection.parentElement) DOM.heroSection.parentElement.style.display = 'none';
+    if (DOM.heroSection?.parentElement) DOM.heroSection.parentElement.style.display = 'none';
     if (DOM.aboutHero) DOM.aboutHero.style.display = 'none';
-    if (latestSection) latestSection.style.display = 'none';
-    if (DOM.genresBar && DOM.genresBar.parentElement) DOM.genresBar.parentElement.style.display = 'none';
+    if (DOM.latestSection) DOM.latestSection.style.display = 'none';
+    if (DOM.genresBar?.parentElement) DOM.genresBar.parentElement.style.display = 'none';
     if (DOM.trendingSection) DOM.trendingSection.style.display = 'none';
     if (DOM.moviesSection) DOM.moviesSection.style.display = 'none';
     if (DOM.tvSection) DOM.tvSection.style.display = 'none';
     if (DOM.faqSection) DOM.faqSection.style.display = 'none';
+    if (DOM.continueWatchingSection) DOM.continueWatchingSection.style.display = 'none';
     if (DOM.favoritesSection) DOM.favoritesSection.style.display = 'block';
 
     renderMediaGrid(DOM.favoritesGrid, state.favorites);
     return;
   }
 
-  if (DOM.heroSection && DOM.heroSection.parentElement) DOM.heroSection.parentElement.style.display = 'block';
+  if (DOM.heroSection?.parentElement) DOM.heroSection.parentElement.style.display = 'block';
   if (DOM.aboutHero) DOM.aboutHero.style.display = 'block';
-  if (latestSection) latestSection.style.display = 'block';
-  if (DOM.genresBar && DOM.genresBar.parentElement) DOM.genresBar.parentElement.style.display = 'block';
+  if (DOM.latestSection) DOM.latestSection.style.display = 'block';
+  if (DOM.genresBar?.parentElement) DOM.genresBar.parentElement.style.display = 'block';
   if (DOM.favoritesSection) DOM.favoritesSection.style.display = 'none';
   if (DOM.faqSection) DOM.faqSection.style.display = 'block';
 
-  if (latestGrid) renderMediaGrid(latestGrid, latestList.slice(0, 7));
+  renderContinueWatchingSection();
+  if (DOM.latestGrid) renderMediaGrid(DOM.latestGrid, latestList.slice(0, 8));
 
   if (state.currentNav === 'movies') {
     if (DOM.trendingSection) DOM.trendingSection.style.display = 'none';
-    if (latestSection) latestSection.style.display = 'none';
+    if (DOM.latestSection) DOM.latestSection.style.display = 'none';
     if (DOM.moviesSection) DOM.moviesSection.style.display = 'block';
     if (DOM.tvSection) DOM.tvSection.style.display = 'none';
     renderMediaGrid(DOM.moviesGrid, displayMovies);
   } else if (state.currentNav === 'tv') {
     if (DOM.trendingSection) DOM.trendingSection.style.display = 'none';
-    if (latestSection) latestSection.style.display = 'none';
+    if (DOM.latestSection) DOM.latestSection.style.display = 'none';
     if (DOM.moviesSection) DOM.moviesSection.style.display = 'none';
     if (DOM.tvSection) DOM.tvSection.style.display = 'block';
     renderMediaGrid(DOM.tvGrid, displayTV);
   } else if (state.currentNav === 'trending') {
     if (DOM.trendingSection) DOM.trendingSection.style.display = 'block';
-    if (latestSection) latestSection.style.display = 'none';
+    if (DOM.latestSection) DOM.latestSection.style.display = 'none';
     if (DOM.moviesSection) DOM.moviesSection.style.display = 'none';
     if (DOM.tvSection) DOM.tvSection.style.display = 'none';
     renderMediaGrid(DOM.trendingGrid, displayTrending);
   } else {
-    // Mode Accueil (Découvrir)
     if (DOM.trendingSection) DOM.trendingSection.style.display = 'block';
     if (DOM.moviesSection) DOM.moviesSection.style.display = 'block';
     if (DOM.tvSection) DOM.tvSection.style.display = 'block';
@@ -448,14 +691,14 @@ function renderAllSections() {
   }
 }
 
-// Rend une grille de cartes de médias (HANDYFLIX EXACT MATCH)
+// Rend une grille de cartes médias SpaceFlix
 function renderMediaGrid(containerEl, list) {
   if (!containerEl) return;
   if (!list || list.length === 0) {
     containerEl.innerHTML = `
-      <div style="grid-column: 1/-1; text-align: center; padding: 3rem 1rem; color: #7f7f7f;">
-        <i class="fa-solid fa-film" style="font-size: 2.5rem; margin-bottom: 0.8rem; opacity: 0.4;"></i>
-        <p>Aucun titre trouvé dans cette catégorie.</p>
+      <div style="grid-column: 1/-1; text-align: center; padding: 3.5rem 1rem; color: #94a3b8;">
+        <i class="fa-solid fa-film" style="font-size: 2.8rem; margin-bottom: 1rem; opacity: 0.3; color: #E50914;"></i>
+        <p style="font-size: 1.1rem; font-weight: 500;">Aucun titre trouvé pour le moment.</p>
       </div>
     `;
     return;
@@ -464,16 +707,13 @@ function renderMediaGrid(containerEl, list) {
   containerEl.innerHTML = list.map(media => {
     const title = (media.title || 'Titre').replace(/"/g, '&quot;');
     const year = media.release_year || '2026';
-    
-    let posterSrc = media.poster_url;
-    if (!posterSrc || posterSrc.includes('/null') || posterSrc.includes('via.placeholder.com')) {
-      posterSrc = getFallbackPoster(title, year);
-    }
+    let posterSrc = media.poster_url || getFallbackPoster(title, year);
 
     return `
     <div class="handy-media-card" data-id="${media.id}">
       <div class="handy-poster-wrap">
-        <img src="${posterSrc}" alt="${title}" class="handy-poster" loading="lazy" onerror="window.handleCardImageError(this, '${title}', '${year}')">
+        <img src="${posterSrc}" alt="${title}" class="handy-poster" loading="lazy" onerror="this.onerror=null; this.src='${getFallbackPoster(title, year)}'">
+        <div class="card-hover-play"><i class="fa-solid fa-play"></i></div>
       </div>
       <div class="handy-card-details">
         <h4 class="handy-card-title">${title}</h4>
@@ -490,7 +730,7 @@ function renderMediaGrid(containerEl, list) {
   containerEl.querySelectorAll('.handy-media-card').forEach(card => {
     card.addEventListener('click', async () => {
       const mediaId = card.getAttribute('data-id');
-      let media = state.mediaList.find(m => String(m.id) === String(mediaId));
+      let media = state.mediaList.find(m => String(m.id) === String(mediaId)) || state.filterMediaList.find(m => String(m.id) === String(mediaId));
       if (!media) {
         media = await SupabaseService.getMediaById(mediaId);
       }
@@ -501,42 +741,310 @@ function renderMediaGrid(containerEl, list) {
   });
 }
 
-// --- STREAM PLAYER MODAL LOGIC ---
-async function openPlayerModal(media, episodeNumber = 1) {
+// --- LOGIQUE DES FILTRES AVANCÉS & CATALOGUE DYNAMIQUE (HANDYFLIX) ---
+export async function applyAdvancedFilters(resetPage = true) {
+  if (resetPage) {
+    state.filterPage = 1;
+    state.filterMediaList = [];
+  }
+
+  const type = DOM.filterTypeSelect?.value || 'all';
+  const genre = DOM.filterGenreSelect?.value || 'Tous';
+  const year = DOM.filterYearSelect?.value || 'all';
+  const lang = DOM.filterLangSelect?.value || 'all';
+  const sortBy = DOM.filterSortSelect?.value || 'popularity.desc';
+
+  const isDefault = type === 'all' && genre === 'Tous' && year === 'all' && lang === 'all' && sortBy === 'popularity.desc';
+  
+  // Si on est sur la page d'accueil et tous les filtres sont par défaut, on rétablit la vue classique
+  if (isDefault && state.currentNav === 'home') {
+    state.isFilterActive = false;
+    if (DOM.filteredResultsWrapper) DOM.filteredResultsWrapper.style.display = 'none';
+    if (DOM.trendingSection) DOM.trendingSection.style.display = 'block';
+    if (DOM.moviesSection) DOM.moviesSection.style.display = 'block';
+    if (DOM.tvSection) DOM.tvSection.style.display = 'block';
+    if (DOM.latestSection) DOM.latestSection.style.display = 'block';
+    return;
+  }
+
+  state.isFilterActive = true;
+
+  if (DOM.filteredResultsWrapper) {
+    DOM.filteredResultsWrapper.style.display = 'block';
+  }
+
+  // Masquer les sections par défaut pour afficher la grille personnalisée
+  if (DOM.trendingSection) DOM.trendingSection.style.display = 'none';
+  if (DOM.moviesSection) DOM.moviesSection.style.display = 'none';
+  if (DOM.tvSection) DOM.tvSection.style.display = 'none';
+  if (DOM.latestSection) DOM.latestSection.style.display = 'none';
+
+  if (DOM.filteredCatalogTitle) {
+    let typeName = 'Films & Séries';
+    if (type === 'movie') typeName = 'Films';
+    if (type === 'tv') typeName = 'Séries TV & Animes';
+    const genreStr = genre !== 'Tous' ? ` • ${genre}` : '';
+    const yearStr = year !== 'all' ? ` (${year})` : '';
+    DOM.filteredCatalogTitle.textContent = `${typeName}${genreStr}${yearStr}`;
+  }
+
+  if (DOM.filteredCatalogBadge) {
+    DOM.filteredCatalogBadge.textContent = `Page ${state.filterPage}`;
+  }
+
+  if (resetPage && DOM.filteredCatalogGrid) {
+    DOM.filteredCatalogGrid.innerHTML = `
+      <div style="grid-column: 1/-1; text-align: center; padding: 3rem 1rem; color: #ff3344;">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 2.2rem; margin-bottom: 0.8rem;"></i>
+        <p style="color: var(--text-muted); font-size: 0.95rem;">Chargement des titres du catalogue...</p>
+      </div>
+    `;
+  }
+
+  try {
+    state.isLoadingFilterPage = true;
+    if (DOM.loadMoreSpinner) DOM.loadMoreSpinner.classList.remove('hidden');
+
+    const results = await TMDBService.discoverMedia({
+      type,
+      genre,
+      year,
+      lang,
+      sortBy,
+      page: state.filterPage
+    });
+
+    if (resetPage) {
+      state.filterMediaList = results;
+    } else {
+      const existingIds = new Set(state.filterMediaList.map(m => String(m.id)));
+      const newItems = results.filter(m => !existingIds.has(String(m.id)));
+      state.filterMediaList = [...state.filterMediaList, ...newItems];
+    }
+
+    renderMediaGrid(DOM.filteredCatalogGrid, state.filterMediaList);
+
+    if (DOM.btnLoadMoreCatalog) {
+      DOM.btnLoadMoreCatalog.style.display = results.length > 0 ? 'inline-flex' : 'none';
+    }
+  } catch (err) {
+    console.error("Erreur discoverMedia:", err);
+  } finally {
+    state.isLoadingFilterPage = false;
+    if (DOM.loadMoreSpinner) DOM.loadMoreSpinner.classList.add('hidden');
+  }
+}
+
+export function resetAdvancedFilters() {
+  if (DOM.filterTypeSelect) DOM.filterTypeSelect.value = 'all';
+  if (DOM.filterGenreSelect) DOM.filterGenreSelect.value = 'Tous';
+  if (DOM.filterYearSelect) DOM.filterYearSelect.value = 'all';
+  if (DOM.filterLangSelect) DOM.filterLangSelect.value = 'all';
+  if (DOM.filterSortSelect) DOM.filterSortSelect.value = 'popularity.desc';
+  state.filterPage = 1;
+  state.filterMediaList = [];
+  state.isFilterActive = false;
+  applyAdvancedFilters(true);
+}
+
+// --- RECHERCHE INSTANTANÉE EN DIRECT (AUTOCOMPLÉTION & APERÇU) ---
+let instantSearchDebounce = null;
+
+function setupLiveInstantSearch() {
+  if (!DOM.searchInput) return;
+
+  DOM.searchInput.addEventListener('input', (e) => {
+    const query = e.target.value.trim();
+    clearTimeout(instantSearchDebounce);
+
+    if (query.length < 2) {
+      DOM.instantSearchDropdown?.classList.add('hidden');
+      return;
+    }
+
+    instantSearchDebounce = setTimeout(async () => {
+      if (DOM.instantSearchResults) {
+        DOM.instantSearchResults.innerHTML = `
+          <div style="text-align: center; padding: 1.5rem 1rem; color: #ff3344;">
+            <i class="fa-solid fa-circle-notch fa-spin"></i>
+            <span style="font-size: 0.85rem; margin-left: 6px; color: var(--text-muted);">Recherche en cours...</span>
+          </div>
+        `;
+        DOM.instantSearchDropdown?.classList.remove('hidden');
+      }
+
+      const results = await TMDBService.searchMedia(query);
+      if (!results || results.length === 0) {
+        if (DOM.instantSearchResults) {
+          DOM.instantSearchResults.innerHTML = `
+            <div class="live-search-empty">
+              <i class="fa-solid fa-magnifying-glass" style="margin-bottom: 0.5rem; opacity: 0.4;"></i>
+              <div>Aucun film ou série trouvé pour "${query}"</div>
+            </div>
+          `;
+        }
+        return;
+      }
+
+      const topResults = results.slice(0, 8);
+      if (DOM.instantSearchCount) {
+        DOM.instantSearchCount.innerHTML = `<i class="fa-solid fa-bolt" style="color: #ff3344; margin-right: 4px;"></i> ${results.length} résultat${results.length > 1 ? 's' : ''}`;
+      }
+
+      DOM.instantSearchResults.innerHTML = topResults.map(item => `
+        <div class="live-search-item" data-id="${item.id}">
+          <img src="${item.poster_url || getFallbackPoster(item.title, item.release_year)}" class="live-search-poster" alt="${item.title}" onerror="this.onerror=null; this.src='${getFallbackPoster(item.title, item.release_year)}'">
+          <div class="live-search-info">
+            <div class="live-search-title">${item.title}</div>
+            <div class="live-search-meta">
+              <span class="type-tag">${item.type === 'movie' ? 'FILM' : 'SÉRIE'}</span>
+              <span>${item.release_year || 'HD'}</span>
+              <span class="rating"><i class="fa-solid fa-star"></i> ${item.rating || '8.0'}</span>
+            </div>
+          </div>
+        </div>
+      `).join('');
+
+      DOM.instantSearchResults.querySelectorAll('.live-search-item').forEach(el => {
+        el.addEventListener('click', () => {
+          const id = el.getAttribute('data-id');
+          const found = topResults.find(m => String(m.id) === String(id));
+          if (found) {
+            DOM.instantSearchDropdown?.classList.add('hidden');
+            openPlayerModal(found);
+          }
+        });
+      });
+    }, 220);
+  });
+
+  DOM.closeInstantSearchBtn?.addEventListener('click', () => {
+    DOM.instantSearchDropdown?.classList.add('hidden');
+  });
+
+  document.addEventListener('click', (e) => {
+    if (DOM.instantSearchDropdown && !DOM.instantSearchDropdown.contains(e.target) && e.target !== DOM.searchInput && e.target !== DOM.searchTriggerBtn) {
+      DOM.instantSearchDropdown.classList.add('hidden');
+    }
+  });
+}
+
+// --- LECTEUR VIDÉO SUR MESURE AVEC BANDES-ANNONCES TMDB ---
+export async function openPlayerModal(media, seasonNumber = 1, episodeNumber = 1, forceAutoResume = false, startAsTrailer = false) {
   state.activeMedia = media;
   state.activeServerIndex = 0;
-  state.activeSeason = 1;
+  state.activeSeason = seasonNumber;
   state.activeEpisodeNumber = episodeNumber;
+  state.playbackSeconds = 0;
+  state.isPlaying = true;
+  state.playerMode = startAsTrailer ? 'trailer' : 'stream';
+  state.isTheaterMode = false;
+  if (DOM.videoContainerWrap) DOM.videoContainerWrap.classList.remove('theater-mode');
+  if (DOM.playerErrorOverlay) DOM.playerErrorOverlay.classList.add('hidden');
 
   DOM.modalTitle.textContent = media.title;
-  DOM.modalYear.textContent = media.release_year;
+  DOM.modalYear.textContent = media.release_year || '2026';
   DOM.modalRating.innerHTML = `<i class="fa-solid fa-star"></i> ${media.rating || '8.0'}`;
-  DOM.modalDuration.textContent = media.duration || '';
-  DOM.modalSynopsis.textContent = media.synopsis;
+  DOM.modalDuration.textContent = media.duration || (media.type === 'movie' ? '2h 10m' : '1 Saison');
+  DOM.modalSynopsis.textContent = media.synopsis || 'Aucun synopsis disponible.';
 
-  DOM.modalGenresTags.innerHTML = (media.genres || []).map(g => `
+  DOM.modalGenresTags.innerHTML = (media.genres || ['Action']).map(g => `
     <span class="badge badge-lang" style="font-size: 0.7rem;">${g}</span>
   `).join('');
 
   const isFav = await SupabaseService.isFavorite(media.id);
   updateFavButtonUI(DOM.modalFavBtn, DOM.modalFavText, isFav);
 
-  // Configuration du lecteur pour les séries vs films
-  if (media.type === 'tv' && media.seasons && media.seasons.length > 0) {
+  // Récupération asynchrone des bandes-annonces officielles TMDB
+  const tmdbId = media.tmdb_id || media.id;
+  TMDBService.getMediaVideos(tmdbId, media.type).then(videos => {
+    state.mediaVideos = videos;
+    updateSourceTabsUI();
+  }).catch(() => {
+    state.mediaVideos = [];
+  });
+
+  updateSourceTabsUI();
+
+  // Configuration Séries vs Films
+  if (media.type === 'tv') {
     DOM.seriesEpisodesWrapper.style.display = 'block';
     setupSeriesSelector(media);
   } else {
     DOM.seriesEpisodesWrapper.style.display = 'none';
-    setupVideoServers(media.video_servers || []);
+    if (state.playerMode === 'trailer') {
+      loadTrailerVideo();
+    } else {
+      setupVideoServers(media.video_servers || generateDefaultServers(media));
+    }
   }
+
+  // Vérification de la reprise de lecture automatique
+  const savedProgress = await SupabaseService.getPlaybackProgress(media.id, state.activeSeason, state.activeEpisodeNumber);
+  
+  if (savedProgress && savedProgress.current_time_seconds > 10) {
+    state.playbackSeconds = savedProgress.current_time_seconds;
+    if (forceAutoResume) {
+      if (DOM.playerResumeBanner) DOM.playerResumeBanner.classList.add('hidden');
+    } else {
+      if (DOM.playerResumeBanner && DOM.resumeTimeText) {
+        DOM.resumeTimeText.textContent = formatTime(savedProgress.current_time_seconds);
+        DOM.playerResumeBanner.classList.remove('hidden');
+      }
+    }
+  } else {
+    if (DOM.playerResumeBanner) DOM.playerResumeBanner.classList.add('hidden');
+  }
+
+  // Démarrer l'enregistrement de progression
+  startPlaybackTracker();
+  updatePlayPauseButtonUI();
 
   DOM.playerModal.classList.add('active');
   document.body.style.overflow = 'hidden';
 }
 
+function updateSourceTabsUI() {
+  if (DOM.tabStreamFull && DOM.tabStreamTrailer) {
+    if (state.playerMode === 'stream') {
+      DOM.tabStreamFull.classList.add('active');
+      DOM.tabStreamTrailer.classList.remove('active');
+    } else {
+      DOM.tabStreamTrailer.classList.add('active');
+      DOM.tabStreamFull.classList.remove('active');
+    }
+  }
+}
+
+function generateDefaultServers(media, season = 1, episode = 1) {
+  const tmdbId = media.tmdb_id || media.id.replace(/^[a-z]+-/, '');
+  if (media.type === 'movie') {
+    return [
+      { name: "Serveur 1 (VidLink HD)", url: `https://vidlink.pro/movie/${tmdbId}`, quality: "1080p", lang: "VF/VOSTFR" },
+      { name: "Serveur 2 (VidSrc CC)", url: `https://vidsrc.cc/v2/embed/movie/${tmdbId}`, quality: "1080p", lang: "VF" },
+      { name: "Serveur 3 (VidSrc To)", url: `https://vidsrc.to/embed/movie/${tmdbId}`, quality: "1080p", lang: "VF" },
+      { name: "Serveur 4 (SuperEmbed)", url: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1`, quality: "1080p", lang: "VF/VOSTFR" },
+      { name: "Serveur 5 (VidSrc Me)", url: `https://vidsrc.me/embed/movie?tmdb=${tmdbId}`, quality: "1080p", lang: "VF" },
+      { name: "Serveur 6 (AutoEmbed)", url: `https://player.autoembed.cc/embed/movie/${tmdbId}`, quality: "1080p", lang: "VF" },
+      { name: "Serveur 7 (Videasy HD)", url: `https://player.videasy.net/movie/${tmdbId}`, quality: "1080p", lang: "VOSTFR" },
+      { name: "Serveur 8 (SmashyStream)", url: `https://embed.smashystream.com/playere.php?tmdb=${tmdbId}`, quality: "1080p", lang: "Multi" }
+    ];
+  }
+  return [
+    { name: "Serveur 1 (VidLink HD)", url: `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}`, quality: "1080p", lang: "VF/VOSTFR" },
+    { name: "Serveur 2 (VidSrc CC)", url: `https://vidsrc.cc/v2/embed/tv/${tmdbId}/${season}/${episode}`, quality: "1080p", lang: "VF" },
+    { name: "Serveur 3 (VidSrc To)", url: `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${episode}`, quality: "1080p", lang: "VF" },
+    { name: "Serveur 4 (SuperEmbed)", url: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&s=${season}&e=${episode}`, quality: "1080p", lang: "VF/VOSTFR" },
+    { name: "Serveur 5 (VidSrc Me)", url: `https://vidsrc.me/embed/tv?tmdb=${tmdbId}&season=${season}&episode=${episode}`, quality: "1080p", lang: "VF" },
+    { name: "Serveur 6 (AutoEmbed)", url: `https://player.autoembed.cc/embed/tv/${tmdbId}/${season}/${episode}`, quality: "1080p", lang: "VF" },
+    { name: "Serveur 7 (Videasy HD)", url: `https://player.videasy.net/tv/${tmdbId}/${season}/${episode}`, quality: "1080p", lang: "VOSTFR" },
+    { name: "Serveur 8 (SmashyStream)", url: `https://embed.smashystream.com/playere.php?tmdb=${tmdbId}&season=${season}&episode=${episode}`, quality: "1080p", lang: "Multi" }
+  ];
+}
+
 function setupVideoServers(servers) {
   if (!servers || servers.length === 0) {
-    servers = [{ name: "Serveur HD 1 (VF)", url: `https://vidsrc.to/embed/${state.activeMedia.type}/${state.activeMedia.id}`, lang: "VF" }];
+    servers = generateDefaultServers(state.activeMedia, state.activeSeason, state.activeEpisodeNumber);
   }
 
   DOM.serverButtonsContainer.innerHTML = servers.map((srv, idx) => `
@@ -549,45 +1057,120 @@ function setupVideoServers(servers) {
     btn.addEventListener('click', (e) => {
       const idx = parseInt(e.currentTarget.getAttribute('data-idx'));
       state.activeServerIndex = idx;
+      state.playerMode = 'stream';
+      updateSourceTabsUI();
       setupVideoServers(servers);
       loadVideoIframe(servers[idx].url);
     });
   });
 
-  loadVideoIframe(servers[state.activeServerIndex]?.url || servers[0].url);
-}
-
-function loadVideoIframe(url) {
-  if (url) {
-    DOM.videoIframe.src = url;
+  if (state.playerMode === 'stream') {
+    loadVideoIframe(servers[state.activeServerIndex]?.url || servers[0].url);
   }
 }
 
-function setupSeriesSelector(media) {
-  DOM.seasonSelect.innerHTML = media.seasons.map(s => `
-    <option value="${s.season_number}">Saison ${s.season_number}</option>
+function loadTrailerVideo() {
+  const trailer = state.mediaVideos.find(v => v.type === 'Trailer' || v.official) || state.mediaVideos[0];
+  if (trailer && trailer.embedUrl) {
+    loadVideoIframe(trailer.embedUrl);
+  } else {
+    // Si aucun trailer YouTube TMDB spécifique trouvé, fallback vers recherche YouTube embed
+    const query = encodeURIComponent(`${state.activeMedia.title} bande annonce officielle fr`);
+    loadVideoIframe(`https://www.youtube-nocookie.com/embed?listType=search&list=${query}&autoplay=1`);
+  }
+}
+
+function loadVideoIframe(url) {
+  if (DOM.playerErrorOverlay) DOM.playerErrorOverlay.classList.add('hidden');
+  if (DOM.videoIframe && url) {
+    DOM.videoIframe.removeAttribute('sandbox');
+    DOM.videoIframe.setAttribute('allowfullscreen', 'true');
+    DOM.videoIframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
+    DOM.videoIframe.src = url;
+  }
+  const extBtn = document.getElementById('btn-open-external-stream');
+  if (extBtn && url) {
+    extBtn.href = url;
+  }
+}
+
+async function setupSeriesSelector(media) {
+  const tmdbId = media.tmdb_id || media.id.replace(/^[a-z]+-/, '');
+
+  // Charger les saisons depuis TMDB si possible
+  let seasons = (media.seasons && media.seasons.length > 0) ? media.seasons : [];
+  if (seasons.length <= 1) {
+    try {
+      const tvDetails = await TMDBService.getTVShowDetails(tmdbId);
+      if (tvDetails && tvDetails.seasons && tvDetails.seasons.length > 0) {
+        seasons = tvDetails.seasons
+          .filter(s => s.season_number > 0)
+          .map(s => ({
+            season_number: s.season_number,
+            name: s.name || `Saison ${s.season_number}`,
+            episode_count: s.episode_count || 10
+          }));
+      }
+    } catch (e) {
+      console.warn("Info fetch tv details:", e.message);
+    }
+  }
+
+  if (seasons.length === 0) {
+    seasons = [{ season_number: 1, name: 'Saison 1', episode_count: 10 }];
+  }
+
+  media.seasons = seasons;
+
+  DOM.seasonSelect.innerHTML = seasons.map(s => `
+    <option value="${s.season_number}">${s.name || `Saison ${s.season_number}`}</option>
   `).join('');
 
   DOM.seasonSelect.value = state.activeSeason;
-  DOM.seasonSelect.onchange = (e) => {
+  DOM.seasonSelect.onchange = async (e) => {
     state.activeSeason = parseInt(e.target.value);
-    renderEpisodes(media);
+    state.activeEpisodeNumber = 1;
+    await renderEpisodes(media);
   };
 
-  renderEpisodes(media);
+  await renderEpisodes(media);
 }
 
-function renderEpisodes(media) {
-  const seasonData = media.seasons.find(s => s.season_number === state.activeSeason) || media.seasons[0];
-  const episodes = seasonData ? seasonData.episodes : [];
+async function renderEpisodes(media) {
+  const tmdbId = media.tmdb_id || media.id.replace(/^[a-z]+-/, '');
+  const seasonData = media.seasons?.find(s => s.season_number === state.activeSeason);
+  let episodes = seasonData?.episodes || [];
+
+  // Si les épisodes ne sont pas encore chargés pour cette saison, interroger TMDB
+  if (!episodes || episodes.length === 0) {
+    try {
+      const tmdbEpisodes = await TMDBService.getTVSeasonDetails(tmdbId, state.activeSeason);
+      if (tmdbEpisodes && tmdbEpisodes.length > 0) {
+        episodes = tmdbEpisodes;
+        if (seasonData) seasonData.episodes = episodes;
+      }
+    } catch (e) {
+      console.warn("Info fetch season episodes:", e.message);
+    }
+  }
+
+  // Fallback si aucun épisode renvoyé par l'API
+  if (!episodes || episodes.length === 0) {
+    const count = seasonData?.episode_count || 10;
+    episodes = Array.from({ length: Math.min(count, 24) }, (_, i) => ({
+      episode_number: i + 1,
+      title: `Épisode ${i + 1}`,
+      synopsis: 'Épisode disponible en streaming HD.'
+    }));
+  }
 
   DOM.episodesContainer.innerHTML = episodes.map(ep => `
     <div class="episode-card ${ep.episode_number === state.activeEpisodeNumber ? 'active' : ''}" data-ep="${ep.episode_number}">
-      <div style="font-weight: 700; font-size: 0.9rem; color: var(--primary); margin-bottom: 0.2rem;">
+      <div style="font-weight: 700; font-size: 0.9rem; color: #ff3344; margin-bottom: 0.2rem;">
         Épisode ${ep.episode_number}
       </div>
-      <div style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
-        ${ep.title}
+      <div style="font-size: 0.85rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #fff;">
+        ${ep.title || `Épisode ${ep.episode_number}`}
       </div>
     </div>
   `).join('');
@@ -597,33 +1180,94 @@ function renderEpisodes(media) {
       const epNum = parseInt(card.getAttribute('data-ep'));
       state.activeEpisodeNumber = epNum;
       const selectedEp = episodes.find(e => e.episode_number === epNum);
-      if (selectedEp && selectedEp.video_servers) {
-        setupVideoServers(selectedEp.video_servers);
-      } else {
-        setupVideoServers([{ name: `Épisode ${epNum} VF`, url: `https://vidsrc.to/embed/tv/${media.id}/${state.activeSeason}/${epNum}` }]);
-      }
+      state.activeEpisodeTitle = selectedEp?.title || `Épisode ${epNum}`;
+
+      const servers = generateDefaultServers(media, state.activeSeason, epNum);
+
+      state.activeServerIndex = 0;
+      setupVideoServers(servers);
       renderEpisodes(media);
     });
   });
 
   const activeEp = episodes.find(e => e.episode_number === state.activeEpisodeNumber) || episodes[0];
   if (activeEp) {
-    setupVideoServers(activeEp.video_servers);
+    state.activeEpisodeTitle = activeEp.title || `Épisode ${state.activeEpisodeNumber}`;
+    const servers = generateDefaultServers(media, state.activeSeason, state.activeEpisodeNumber);
+    setupVideoServers(servers);
   }
 }
 
-function closePlayerModal() {
-  DOM.playerModal.classList.remove('active');
-  DOM.videoIframe.src = '';
-  document.body.style.overflow = 'auto';
+// Suivi de lecture automatique (Playback Progress Tracker)
+function startPlaybackTracker() {
+  stopPlaybackTracker();
+  state.isPlaying = true;
+  state.playbackTimer = setInterval(() => {
+    state.playbackSeconds += 5;
+    saveCurrentPlayback();
+  }, 5000);
 }
 
-// MISE À JOUR BOUTON FAVORIS
+function stopPlaybackTracker() {
+  if (state.playbackTimer) {
+    clearInterval(state.playbackTimer);
+    state.playbackTimer = null;
+  }
+}
+
+function togglePlayPause() {
+  state.isPlaying = !state.isPlaying;
+  if (state.isPlaying) {
+    startPlaybackTracker();
+  } else {
+    stopPlaybackTracker();
+  }
+  updatePlayPauseButtonUI();
+}
+
+function updatePlayPauseButtonUI() {
+  if (DOM.playPauseIcon && DOM.playPauseLabel) {
+    if (state.isPlaying) {
+      DOM.playPauseIcon.className = 'fa-solid fa-pause';
+      DOM.playPauseLabel.textContent = 'Pause';
+    } else {
+      DOM.playPauseIcon.className = 'fa-solid fa-play';
+      DOM.playPauseLabel.textContent = 'Lecture';
+    }
+  }
+}
+
+async function saveCurrentPlayback() {
+  if (!state.activeMedia || state.playbackSeconds < 5) return;
+
+  await SupabaseService.savePlaybackProgress({
+    mediaId: state.activeMedia.id,
+    title: state.activeMedia.title,
+    type: state.activeMedia.type,
+    posterUrl: state.activeMedia.poster_url,
+    seasonNumber: state.activeSeason,
+    episodeNumber: state.activeEpisodeNumber,
+    episodeTitle: state.activeEpisodeTitle,
+    currentTime: state.playbackSeconds,
+    duration: state.playbackDuration
+  });
+}
+
+export function closePlayerModal() {
+  saveCurrentPlayback();
+  stopPlaybackTracker();
+  DOM.playerModal.classList.remove('active');
+  if (DOM.videoIframe) DOM.videoIframe.src = '';
+  document.body.style.overflow = 'auto';
+  loadUserData();
+}
+
+// Mise à jour de l'UI du bouton favoris
 function updateFavButtonUI(btnEl, textEl, isFav) {
   if (!btnEl) return;
   if (isFav) {
     btnEl.classList.add('active');
-    btnEl.style.borderColor = 'var(--primary)';
+    btnEl.style.borderColor = '#00f2fe';
     if (textEl) textEl.textContent = 'Dans Ma Liste';
     const icon = btnEl.querySelector('i');
     if (icon) icon.className = 'fa-solid fa-check';
@@ -631,13 +1275,218 @@ function updateFavButtonUI(btnEl, textEl, isFav) {
     btnEl.classList.remove('active');
     if (textEl) textEl.textContent = 'Ajouter à Ma Liste';
     const icon = btnEl.querySelector('i');
-    if (icon) icon.className = 'fa-regular fa-plus';
+    if (icon) icon.className = 'fa-solid fa-plus';
   }
 }
 
-// --- SETUP EVENT LISTENERS ---
+// Mise à jour de l'en-tête utilisateur (Avatar & Profil)
+export function updateAuthHeaderUI() {
+  const user = AuthService.getUser();
+  const headerAvatar = document.getElementById('header-user-avatar');
+  const dropdownAvatar = document.getElementById('dropdown-user-avatar');
+  const dropdownName = document.getElementById('dropdown-user-name');
+  const dropdownEmail = document.getElementById('dropdown-user-email');
+
+  if (user) {
+    if (headerAvatar) headerAvatar.textContent = user.initials;
+    if (dropdownAvatar) dropdownAvatar.textContent = user.initials;
+    if (dropdownName) dropdownName.textContent = user.name;
+    if (dropdownEmail) dropdownEmail.textContent = user.email;
+    if (DOM.dropdownActionLabel) DOM.dropdownActionLabel.textContent = 'Mon Compte';
+    if (DOM.dropdownLogoutBtn) DOM.dropdownLogoutBtn.style.display = 'flex';
+    if (DOM.dropdownLogoutDivider) DOM.dropdownLogoutDivider.style.display = 'block';
+  } else {
+    if (headerAvatar) headerAvatar.textContent = 'SF';
+    if (dropdownAvatar) dropdownAvatar.textContent = 'SF';
+    if (dropdownName) dropdownName.textContent = 'Invité';
+    if (dropdownEmail) dropdownEmail.textContent = 'Non connecté';
+    if (DOM.dropdownActionLabel) DOM.dropdownActionLabel.textContent = "Se connecter / S'inscrire";
+    if (DOM.dropdownLogoutBtn) DOM.dropdownLogoutBtn.style.display = 'none';
+    if (DOM.dropdownLogoutDivider) DOM.dropdownLogoutDivider.style.display = 'none';
+  }
+}
+
+// --- GESTION DES MODALS D'AUTHENTIFICATION ---
+let currentAuthMode = 'login'; // 'login' | 'signup'
+
+export function openAuthModal(mode = 'login') {
+  currentAuthMode = mode;
+  if (DOM.authErrorMsg) DOM.authErrorMsg.classList.add('hidden');
+  if (mode === 'login') {
+    DOM.tabLoginBtn?.classList.add('active');
+    DOM.tabSignupBtn?.classList.remove('active');
+    if (DOM.nameFieldGroup) DOM.nameFieldGroup.style.display = 'none';
+    if (DOM.authSubmitBtn) DOM.authSubmitBtn.textContent = 'Se connecter';
+    if (DOM.authModalTitle) DOM.authModalTitle.textContent = 'Espace Membre SpaceFlix';
+    if (DOM.authModalSubtitle) DOM.authModalSubtitle.textContent = 'Connectez-vous pour synchroniser vos favoris et vos reprises de lecture.';
+  } else {
+    DOM.tabSignupBtn?.classList.add('active');
+    DOM.tabLoginBtn?.classList.remove('active');
+    if (DOM.nameFieldGroup) DOM.nameFieldGroup.style.display = 'flex';
+    if (DOM.authSubmitBtn) DOM.authSubmitBtn.textContent = "Créer mon compte";
+    if (DOM.authModalTitle) DOM.authModalTitle.textContent = 'Créer un compte SpaceFlix';
+    if (DOM.authModalSubtitle) DOM.authModalSubtitle.textContent = 'Rejoignez la communauté et synchronisez vos vidéos partout.';
+  }
+  DOM.authModal?.classList.remove('hidden');
+  DOM.profileDropdown?.classList.add('hidden');
+}
+
+export function closeAuthModal() {
+  DOM.authModal?.classList.add('hidden');
+}
+
+// --- GESTION DU TÉLÉCHARGEMENT DE CONTENU ---
+export function openDownloadModal() {
+  if (!state.activeMedia) return;
+  const media = state.activeMedia;
+  const isMovie = media.type === 'movie';
+  const title = media.title || 'Média';
+  const tmdbId = media.tmdb_id || media.id.replace(/^[a-z]+-/, '');
+  const season = state.activeSeason || 1;
+  const episode = state.activeEpisodeNumber || 1;
+  const epTitle = state.activeEpisodeTitle || `Épisode ${episode}`;
+
+  if (DOM.downloadMediaTitle) {
+    DOM.downloadMediaTitle.textContent = isMovie ? title : `${title} - S${season}E${episode}`;
+  }
+  if (DOM.downloadMediaSubtitle) {
+    DOM.downloadMediaSubtitle.textContent = isMovie 
+      ? `Options de téléchargement pour "${title}" (${media.release_year || 'HD'})`
+      : `Options de téléchargement pour ${title} - Saison ${season}, ${epTitle}`;
+  }
+
+  // Vérification de source directe téléchargeable
+  const currentServers = (media.video_servers && media.video_servers.length > 0)
+    ? media.video_servers
+    : generateDefaultServers(media, season, episode);
+
+  const activeServer = currentServers[state.activeServerIndex] || currentServers[0] || { url: DOM.videoIframe?.src || '' };
+  const currentStreamUrl = DOM.videoIframe?.src || activeServer.url || '';
+
+  const downloadOptions = [
+    {
+      icon: 'fa-solid fa-cloud-arrow-down',
+      name: 'Téléchargement Direct 1080p (Fast MP4)',
+      badge: 'HD Recommandé',
+      desc: 'Télécharge le fichier vidéo directement via le serveur haute vitesse.',
+      action: () => {
+        // Détection de lien direct MP4 / MKV / M3U8
+        if (currentStreamUrl && (currentStreamUrl.endsWith('.mp4') || currentStreamUrl.endsWith('.mkv') || currentStreamUrl.endsWith('.webm'))) {
+          const a = document.createElement('a');
+          a.href = currentStreamUrl;
+          a.download = `${title.replace(/[^a-zA-Z0-9]/g, '_')}_${isMovie ? 'HD' : `S${season}E${episode}`}.mp4`;
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+        } else {
+          const dlUrl = isMovie 
+            ? `https://vidlink.pro/movie/${tmdbId}` 
+            : `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}`;
+          window.open(dlUrl, '_blank');
+        }
+      }
+    },
+    {
+      icon: 'fa-solid fa-film',
+      name: 'Serveur VidSrc HD Multi-Langues',
+      badge: 'VF / VOSTFR',
+      desc: 'Flux complet avec choix des pistes audio et sous-titres.',
+      action: () => {
+        const dlUrl = isMovie 
+          ? `https://vidsrc.to/embed/movie/${tmdbId}` 
+          : `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${episode}`;
+        window.open(dlUrl, '_blank');
+      }
+    },
+    {
+      icon: 'fa-solid fa-server',
+      name: 'Téléchargement Universel (AutoEmbed)',
+      badge: 'Ultra Rapide',
+      desc: 'Générateur de lien de téléchargement direct sans attente.',
+      action: () => {
+        const dlUrl = isMovie 
+          ? `https://player.autoembed.cc/embed/movie/${tmdbId}` 
+          : `https://player.autoembed.cc/embed/tv/${tmdbId}/${season}/${episode}`;
+        window.open(dlUrl, '_blank');
+      }
+    },
+    {
+      icon: 'fa-regular fa-copy',
+      name: 'Copier le lien direct du flux en cours',
+      badge: 'Presse-papier',
+      desc: 'Copie l\'adresse source pour l\'utiliser dans VLC, IDM ou votre gestionnaire.',
+      isCopy: true,
+      action: (btn) => {
+        navigator.clipboard.writeText(currentStreamUrl).then(() => {
+          const orig = btn.innerHTML;
+          btn.innerHTML = `
+            <div style="display: flex; align-items: center; gap: 0.9rem; width: 100%;">
+              <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(34, 197, 94, 0.2); color: #22c55e; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+                <i class="fa-solid fa-check"></i>
+              </div>
+              <div>
+                <div style="font-weight: 700; font-size: 0.95rem; color: #22c55e;">Lien copié dans le presse-papier !</div>
+                <div style="font-size: 0.8rem; color: var(--text-muted); text-overflow: ellipsis; overflow: hidden; white-space: nowrap; max-width: 320px;">${currentStreamUrl}</div>
+              </div>
+            </div>
+          `;
+          setTimeout(() => { btn.innerHTML = orig; }, 2500);
+        });
+      }
+    }
+  ];
+
+  if (DOM.downloadSourcesContainer) {
+    DOM.downloadSourcesContainer.innerHTML = '';
+    downloadOptions.forEach(opt => {
+      const btn = document.createElement('div');
+      btn.className = 'download-source-item';
+      btn.style.cssText = 'background: rgba(255,255,255,0.04); border: 1px solid var(--border-glass); border-radius: 12px; padding: 0.9rem 1.1rem; display: flex; align-items: center; justify-content: space-between; cursor: pointer; transition: all 0.2s ease; gap: 1rem;';
+      btn.innerHTML = `
+        <div style="display: flex; align-items: center; gap: 0.9rem;">
+          <div style="width: 40px; height: 40px; border-radius: 10px; background: rgba(229, 9, 20, 0.15); color: #ff3344; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; flex-shrink: 0;">
+            <i class="${opt.icon}"></i>
+          </div>
+          <div>
+            <div style="font-weight: 700; font-size: 0.95rem; color: #fff; margin-bottom: 0.2rem; display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+              <span>${opt.name}</span>
+              <span style="font-size: 0.7rem; background: rgba(255,255,255,0.1); padding: 0.15rem 0.5rem; border-radius: 6px; color: #fbbf24; font-weight: 600;">${opt.badge}</span>
+            </div>
+            <div style="font-size: 0.8rem; color: var(--text-muted);">${opt.desc}</div>
+          </div>
+        </div>
+        <div style="color: var(--primary); font-size: 1rem; flex-shrink: 0;">
+          <i class="fa-solid fa-chevron-right"></i>
+        </div>
+      `;
+      btn.addEventListener('mouseenter', () => {
+        btn.style.background = 'rgba(229, 9, 20, 0.12)';
+        btn.style.borderColor = 'rgba(229, 9, 20, 0.4)';
+        btn.style.transform = 'translateX(4px)';
+      });
+      btn.addEventListener('mouseleave', () => {
+        btn.style.background = 'rgba(255,255,255,0.04)';
+        btn.style.borderColor = 'var(--border-glass)';
+        btn.style.transform = 'translateX(0)';
+      });
+      btn.addEventListener('click', () => {
+        opt.action(btn);
+      });
+      DOM.downloadSourcesContainer.appendChild(btn);
+    });
+  }
+
+  DOM.downloadModal?.classList.remove('hidden');
+}
+
+export function closeDownloadModal() {
+  DOM.downloadModal?.classList.add('hidden');
+}
+
+// --- SETUP DES EVENT LISTENERS ---
 function setupEventListeners() {
-  // Navigation links
+  // Navigation Links
   DOM.navLinks.forEach(link => {
     link.addEventListener('click', async (e) => {
       e.preventDefault();
@@ -647,11 +1496,21 @@ function setupEventListeners() {
       state.currentNav = link.getAttribute('data-nav');
       if (state.currentNav === 'favorites') {
         state.favorites = await SupabaseService.getFavorites();
+      } else if (state.currentNav === 'movies') {
+        if (DOM.filterTypeSelect) DOM.filterTypeSelect.value = 'movie';
+        applyAdvancedFilters(true);
+      } else if (state.currentNav === 'tv') {
+        if (DOM.filterTypeSelect) DOM.filterTypeSelect.value = 'tv';
+        applyAdvancedFilters(true);
+      } else if (state.currentNav === 'home') {
+        if (DOM.filterTypeSelect) DOM.filterTypeSelect.value = 'all';
+        resetAdvancedFilters();
       }
       renderAllSections();
     });
   });
 
+  // Liens avec data-nav dans toute la page
   document.querySelectorAll('[data-nav]').forEach(el => {
     if (!el.classList.contains('nav-link')) {
       el.addEventListener('click', async (e) => {
@@ -665,50 +1524,161 @@ function setupEventListeners() {
         }
         if (state.currentNav === 'favorites') {
           state.favorites = await SupabaseService.getFavorites();
+        } else if (state.currentNav === 'movies') {
+          if (DOM.filterTypeSelect) DOM.filterTypeSelect.value = 'movie';
+          applyAdvancedFilters(true);
+        } else if (state.currentNav === 'tv') {
+          if (DOM.filterTypeSelect) DOM.filterTypeSelect.value = 'tv';
+          applyAdvancedFilters(true);
         }
         renderAllSections();
       });
     }
   });
 
+  // Setup de la recherche instantanée avec prévisualisation
+  setupLiveInstantSearch();
+
+  // Écouteurs Filtres Avancés (Handyflix Style)
+  DOM.filterTypeSelect?.addEventListener('change', () => applyAdvancedFilters(true));
+  DOM.filterGenreSelect?.addEventListener('change', () => applyAdvancedFilters(true));
+  DOM.filterYearSelect?.addEventListener('change', () => applyAdvancedFilters(true));
+  DOM.filterLangSelect?.addEventListener('change', () => applyAdvancedFilters(true));
+  DOM.filterSortSelect?.addEventListener('change', () => applyAdvancedFilters(true));
+  DOM.btnResetFilters?.addEventListener('click', resetAdvancedFilters);
+
+  // Pagination infinie / Charger plus de films
+  DOM.btnLoadMoreCatalog?.addEventListener('click', () => {
+    if (!state.isLoadingFilterPage) {
+      state.filterPage += 1;
+      applyAdvancedFilters(false);
+    }
+  });
+
   // Hub Card Search Focus
-  if (DOM.hubSearchCard) {
+  if (DOM.hubSearchCard && DOM.searchInput) {
     DOM.hubSearchCard.addEventListener('click', () => {
       DOM.searchInput.focus();
       DOM.searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   }
 
-  // Announcement Bar Close
+  // Fermeture du bandeau d'annonce
   if (DOM.closeAnnouncementBtn && DOM.announcementBar) {
     DOM.closeAnnouncementBtn.addEventListener('click', () => {
       DOM.announcementBar.classList.add('hidden');
-      const heroContainer = document.querySelector('.hero-container-outer');
-      if (heroContainer) heroContainer.style.marginTop = '85px';
     });
   }
 
-  // Search input
-  DOM.searchInput.addEventListener('input', (e) => {
-    state.currentSearch = e.target.value.trim();
-    refreshCatalog();
+  // Recherche en direct
+  if (DOM.searchInput) {
+    DOM.searchInput.addEventListener('input', (e) => {
+      state.currentSearch = e.target.value.trim();
+      refreshCatalog();
+    });
+  }
+
+  // Actions Hero
+  DOM.heroPlayBtn?.addEventListener('click', () => {
+    if (state.heroMedia) openPlayerModal(state.heroMedia, 1, 1, false, false);
   });
 
-  // Hero Actions
-  DOM.heroPlayBtn.addEventListener('click', () => {
-    if (state.heroMedia) openPlayerModal(state.heroMedia);
+  DOM.heroTrailerBtn?.addEventListener('click', () => {
+    if (state.heroMedia) openPlayerModal(state.heroMedia, 1, 1, false, true);
   });
 
-  DOM.heroFavBtn.addEventListener('click', async () => {
+  DOM.heroFavBtn?.addEventListener('click', async () => {
     if (state.heroMedia) {
       const isFav = await SupabaseService.toggleFavorite(state.heroMedia.id);
-      updateFavButtonUI(DOM.heroFavBtn, DOM.heroFavText, isFav);
+      updateFavButtonUI(DOM.heroFavBtn, null, isFav);
       state.favorites = await SupabaseService.getFavorites();
     }
   });
 
-  // Modal Fav Action
-  DOM.modalFavBtn.addEventListener('click', async () => {
+  // Flèches Carrousel Hero
+  DOM.heroPrevBtn?.addEventListener('click', () => {
+    const total = state.heroFeaturedList.length;
+    if (total > 0) {
+      const prevIdx = (state.heroIndex - 1 + total) % total;
+      setHeroByIndex(prevIdx);
+    }
+  });
+
+  DOM.heroNextBtn?.addEventListener('click', () => {
+    const total = state.heroFeaturedList.length;
+    if (total > 0) {
+      const nextIdx = (state.heroIndex + 1) % total;
+      setHeroByIndex(nextIdx);
+    }
+  });
+
+  // Pause Hero au survol
+  DOM.heroSection?.addEventListener('mouseenter', stopHeroCarousel);
+  DOM.heroSection?.addEventListener('mouseleave', startHeroCarousel);
+
+  // Player Source Toggle Tabs (Film complet vs Bande-annonce TMDB)
+  DOM.tabStreamFull?.addEventListener('click', () => {
+    state.playerMode = 'stream';
+    updateSourceTabsUI();
+    if (state.activeMedia) {
+      setupVideoServers(state.activeMedia.video_servers || generateDefaultServers(state.activeMedia, state.activeSeason, state.activeEpisodeNumber));
+    }
+  });
+
+  DOM.tabStreamTrailer?.addEventListener('click', () => {
+    state.playerMode = 'trailer';
+    updateSourceTabsUI();
+    loadTrailerVideo();
+  });
+
+  // Contrôles rapides du lecteur (-10s / +10s / Play/Pause)
+  DOM.btnRewind10?.addEventListener('click', () => {
+    state.playbackSeconds = Math.max(0, state.playbackSeconds - 10);
+    saveCurrentPlayback();
+  });
+
+  DOM.btnForward10?.addEventListener('click', () => {
+    state.playbackSeconds += 10;
+    saveCurrentPlayback();
+  });
+
+  DOM.btnTogglePlay?.addEventListener('click', togglePlayPause);
+
+  // Plein écran
+  DOM.btnFullscreenToggle?.addEventListener('click', () => {
+    if (!document.fullscreenElement) {
+      DOM.videoContainerWrap?.requestFullscreen().catch(() => {});
+    } else {
+      document.exitFullscreen().catch(() => {});
+    }
+  });
+
+  // Erreur de flux & fallback
+  DOM.btnErrorSwitchServer?.addEventListener('click', () => {
+    const servers = generateDefaultServers(state.activeMedia, state.activeSeason, state.activeEpisodeNumber);
+    state.activeServerIndex = (state.activeServerIndex + 1) % servers.length;
+    state.playerMode = 'stream';
+    updateSourceTabsUI();
+    setupVideoServers(servers);
+  });
+
+  DOM.btnErrorWatchTrailer?.addEventListener('click', () => {
+    state.playerMode = 'trailer';
+    updateSourceTabsUI();
+    loadTrailerVideo();
+  });
+
+  // Actions Modal Player Fav & Download
+  DOM.modalDownloadBtn?.addEventListener('click', () => {
+    openDownloadModal();
+  });
+
+  DOM.closeDownloadModalBtn?.addEventListener('click', closeDownloadModal);
+  DOM.downloadModal?.addEventListener('click', (e) => {
+    if (e.target === DOM.downloadModal) closeDownloadModal();
+  });
+
+  DOM.modalFavBtn?.addEventListener('click', async () => {
     if (state.activeMedia) {
       const isFav = await SupabaseService.toggleFavorite(state.activeMedia.id);
       updateFavButtonUI(DOM.modalFavBtn, DOM.modalFavText, isFav);
@@ -716,319 +1686,237 @@ function setupEventListeners() {
     }
   });
 
-  // Close player modal
-  DOM.closePlayerBtn.addEventListener('click', closePlayerModal);
-  DOM.playerModal.addEventListener('click', (e) => {
+  // Fermeture Modal Player
+  DOM.closePlayerBtn?.addEventListener('click', closePlayerModal);
+  DOM.playerModal?.addEventListener('click', (e) => {
     if (e.target === DOM.playerModal) closePlayerModal();
   });
 
+  // Boutons du bandeau de reprise de lecture
+  DOM.btnResumeAccept?.addEventListener('click', () => {
+    DOM.playerResumeBanner?.classList.add('hidden');
+  });
 
+  DOM.btnResumeDecline?.addEventListener('click', () => {
+    state.playbackSeconds = 0;
+    DOM.playerResumeBanner?.classList.add('hidden');
+    saveCurrentPlayback();
+  });
 
-function updateAuthHeaderUI() {
-  const user = AuthService.getUser();
-  const headerAvatar = document.getElementById('header-user-avatar');
-  const dropdownAvatar = document.getElementById('dropdown-user-avatar');
-  const dropdownName = document.getElementById('dropdown-user-name');
-  const dropdownEmail = document.getElementById('dropdown-user-email');
-  const dropdownLogoutBtn = document.getElementById('dropdown-logout-btn');
-  const dropdownLogoutDivider = document.getElementById('dropdown-logout-divider');
-  const dropdownActionLabel = document.getElementById('dropdown-action-label');
-
-  if (user) {
-    if (headerAvatar) headerAvatar.textContent = user.initials;
-    if (dropdownAvatar) dropdownAvatar.textContent = user.initials;
-    if (dropdownName) dropdownName.textContent = user.name;
-    if (dropdownEmail) dropdownEmail.textContent = user.email;
-    if (dropdownActionLabel) dropdownActionLabel.textContent = 'Mon Compte';
-    if (dropdownLogoutBtn) dropdownLogoutBtn.style.display = 'flex';
-    if (dropdownLogoutDivider) dropdownLogoutDivider.style.display = 'block';
-  } else {
-    if (headerAvatar) headerAvatar.textContent = 'SF';
-    if (dropdownAvatar) dropdownAvatar.textContent = 'SF';
-    if (dropdownName) dropdownName.textContent = 'Invité';
-    if (dropdownEmail) dropdownEmail.textContent = 'Non connecté';
-    if (dropdownActionLabel) dropdownActionLabel.textContent = "Se connecter / S'inscrire";
-    if (dropdownLogoutBtn) dropdownLogoutBtn.style.display = 'none';
-    if (dropdownLogoutDivider) dropdownLogoutDivider.style.display = 'none';
-  }
-}
-
-  // Header Scroll Effect (Netflix style)
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 30) {
-      DOM.navbar.classList.add('scrolled');
-    } else {
-      DOM.navbar.classList.remove('scrolled');
+  // Bouton recharger flux
+  DOM.btnReloadStream?.addEventListener('click', () => {
+    if (DOM.videoIframe && DOM.videoIframe.src) {
+      const cur = DOM.videoIframe.src;
+      DOM.videoIframe.src = '';
+      setTimeout(() => { DOM.videoIframe.src = cur; }, 150);
     }
   });
 
-  // --- AUTH MODAL & PROFILE DROPDOWN LOGIC ---
-  const authModal = document.getElementById('auth-modal');
-  const closeAuthBtn = document.getElementById('close-auth-btn');
-  const profileBtn = document.getElementById('profile-btn');
-  const profileDropdown = document.getElementById('profile-dropdown');
-  const tabLoginBtn = document.getElementById('tab-login-btn');
-  const tabSignupBtn = document.getElementById('tab-signup-btn');
-  const nameFieldGroup = document.getElementById('name-field-group');
-  const authSubmitBtn = document.getElementById('auth-submit-btn');
-  const authModalTitle = document.getElementById('auth-modal-title');
-  const authModalSubtitle = document.getElementById('auth-modal-subtitle');
-  const googleLoginBtn = document.getElementById('google-login-btn');
-  const authForm = document.getElementById('auth-form');
-  const authErrorMsg = document.getElementById('auth-error-msg');
-  const togglePwdBtn = document.getElementById('toggle-pwd-btn');
-  const authPwdInput = document.getElementById('auth-password');
-  const dropdownLoginTrigger = document.getElementById('dropdown-login-trigger');
-  const dropdownLogoutBtn = document.getElementById('dropdown-logout-btn');
-
-  let currentAuthMode = 'login'; // 'login' | 'signup'
-
-  function openAuthModal(mode = 'login') {
-    currentAuthMode = mode;
-    if (authErrorMsg) authErrorMsg.classList.add('hidden');
-    if (mode === 'login') {
-      tabLoginBtn.classList.add('active');
-      tabSignupBtn.classList.remove('active');
-      nameFieldGroup.style.display = 'none';
-      authSubmitBtn.textContent = 'Se connecter';
-      authModalTitle.textContent = 'Espace Membre SpaceFlix';
-      authModalSubtitle.textContent = 'Connectez-vous pour synchroniser vos favoris et vos préférences.';
-    } else {
-      tabSignupBtn.classList.add('active');
-      tabLoginBtn.classList.remove('active');
-      nameFieldGroup.style.display = 'flex';
-      authSubmitBtn.textContent = "Créer mon compte";
-      authModalTitle.textContent = 'Créer un compte SpaceFlix';
-      authModalSubtitle.textContent = 'Rejoignez la communauté et profitez de vos contenus partout.';
+  // Mode Théâtre / Grand Écran
+  DOM.btnTheaterMode?.addEventListener('click', () => {
+    state.isTheaterMode = !state.isTheaterMode;
+    if (DOM.videoContainerWrap) {
+      DOM.videoContainerWrap.classList.toggle('theater-mode', state.isTheaterMode);
     }
-    if (authModal) authModal.classList.remove('hidden');
-    if (profileDropdown) profileDropdown.classList.add('hidden');
-  }
+  });
 
-  function closeAuthModal() {
-    if (authModal) authModal.classList.add('hidden');
-  }
+  // Modal Raccourcis Clavier
+  DOM.btnShortcutsInfo?.addEventListener('click', () => {
+    DOM.shortcutsModal?.classList.remove('hidden');
+  });
 
-  if (profileBtn) {
-    profileBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      if (!AuthService.getUser()) {
-        openAuthModal('login');
+  DOM.closeShortcutsBtn?.addEventListener('click', () => {
+    DOM.shortcutsModal?.classList.add('hidden');
+  });
+
+  DOM.shortcutsModal?.addEventListener('click', (e) => {
+    if (e.target === DOM.shortcutsModal) DOM.shortcutsModal.classList.add('hidden');
+  });
+
+  // Modal Script SQL Supabase
+  DOM.dropdownSqlBtn?.addEventListener('click', (e) => {
+    e.preventDefault();
+    DOM.sqlModal?.classList.remove('hidden');
+    DOM.profileDropdown?.classList.add('hidden');
+  });
+
+  // Téléchargement direct du ZIP du projet sans redirection
+  const zipDownloadBtn = document.getElementById('dropdown-zip-download-btn');
+  zipDownloadBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    const originalText = zipDownloadBtn.innerHTML;
+    zipDownloadBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin" style="color: #ff3344;"></i> Préparation du ZIP...';
+    try {
+      const res = await fetch('/download-zip');
+      if (res.ok) {
+        const blob = await res.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = downloadUrl;
+        a.download = 'spaceflix-complete-code.zip';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+          window.URL.revokeObjectURL(downloadUrl);
+          document.body.removeChild(a);
+        }, 1000);
       } else {
-        if (profileDropdown) profileDropdown.classList.toggle('hidden');
+        window.open('/download-zip', '_blank');
       }
+    } catch (err) {
+      console.warn("Téléchargement via URL directe:", err.message);
+      window.open('/download-zip', '_blank');
+    } finally {
+      zipDownloadBtn.innerHTML = originalText;
+      DOM.profileDropdown?.classList.add('hidden');
+    }
+  });
+
+  DOM.closeSqlBtn?.addEventListener('click', () => {
+    DOM.sqlModal?.classList.add('hidden');
+  });
+
+  DOM.sqlModal?.addEventListener('click', (e) => {
+    if (e.target === DOM.sqlModal) DOM.sqlModal.classList.add('hidden');
+  });
+
+  DOM.btnCopySqlCode?.addEventListener('click', () => {
+    const code = DOM.sqlCodeDisplay?.textContent || '';
+    navigator.clipboard.writeText(code).then(() => {
+      const orig = DOM.btnCopySqlCode.innerHTML;
+      DOM.btnCopySqlCode.innerHTML = '<i class="fa-solid fa-check"></i> Copié !';
+      setTimeout(() => { DOM.btnCopySqlCode.innerHTML = orig; }, 2000);
     });
-  }
+  });
+
+  // Menu Profil Dropdown
+  DOM.profileBtn?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    if (!AuthService.getUser()) {
+      openAuthModal('login');
+    } else {
+      DOM.profileDropdown?.classList.toggle('hidden');
+    }
+  });
 
   document.addEventListener('click', (e) => {
-    if (profileDropdown && !profileDropdown.contains(e.target) && e.target !== profileBtn) {
-      profileDropdown.classList.add('hidden');
+    if (DOM.profileDropdown && !DOM.profileDropdown.contains(e.target) && e.target !== DOM.profileBtn) {
+      DOM.profileDropdown.classList.add('hidden');
     }
   });
 
-  if (dropdownLoginTrigger) {
-    dropdownLoginTrigger.addEventListener('click', (e) => {
-      e.preventDefault();
-      openAuthModal('login');
+  DOM.dropdownLoginTrigger?.addEventListener('click', (e) => {
+    e.preventDefault();
+    openAuthModal('login');
+  });
+
+  DOM.dropdownLogoutBtn?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    await AuthService.logout();
+    updateAuthHeaderUI();
+    state.favorites = await SupabaseService.getFavorites();
+    state.continueWatchingList = await SupabaseService.getAllContinueWatching();
+    renderAllSections();
+    DOM.profileDropdown?.classList.add('hidden');
+  });
+
+  DOM.closeAuthBtn?.addEventListener('click', closeAuthModal);
+  DOM.authModal?.addEventListener('click', (e) => {
+    if (e.target === DOM.authModal) closeAuthModal();
+  });
+
+  DOM.tabLoginBtn?.addEventListener('click', () => openAuthModal('login'));
+  DOM.tabSignupBtn?.addEventListener('click', () => openAuthModal('signup'));
+
+  if (DOM.togglePwdBtn && DOM.authPwdInput) {
+    DOM.togglePwdBtn.addEventListener('click', () => {
+      const isPwd = DOM.authPwdInput.type === 'password';
+      DOM.authPwdInput.type = isPwd ? 'text' : 'password';
+      DOM.togglePwdBtn.innerHTML = isPwd ? '<i class="fa-regular fa-eye-slash"></i>' : '<i class="fa-regular fa-eye"></i>';
     });
   }
 
-  if (dropdownLogoutBtn) {
-    dropdownLogoutBtn.addEventListener('click', async (e) => {
-      e.preventDefault();
-      await AuthService.logout();
+  // Google Login OAuth
+  DOM.googleLoginBtn?.addEventListener('click', async () => {
+    try {
+      if (DOM.authErrorMsg) DOM.authErrorMsg.classList.add('hidden');
+      await AuthService.loginWithGoogle();
+    } catch (err) {
+      if (DOM.authErrorMsg) {
+        DOM.authErrorMsg.textContent = err.message || 'Connexion Google temporairement indisponible.';
+        DOM.authErrorMsg.classList.remove('hidden');
+      }
+    }
+  });
+
+  // Soumission Formulaire d'authentification
+  DOM.authForm?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('auth-email')?.value.trim();
+    const password = document.getElementById('auth-password')?.value;
+    const name = document.getElementById('auth-name')?.value;
+
+    const originalBtnText = DOM.authSubmitBtn ? DOM.authSubmitBtn.textContent : '';
+    try {
+      if (DOM.authErrorMsg) DOM.authErrorMsg.classList.add('hidden');
+      if (DOM.authSubmitBtn) {
+        DOM.authSubmitBtn.disabled = true;
+        DOM.authSubmitBtn.textContent = 'Connexion en cours...';
+      }
+
+      if (currentAuthMode === 'login') {
+        await AuthService.login(email, password);
+      } else {
+        await AuthService.signup(name, email, password);
+      }
+
       updateAuthHeaderUI();
-      state.favorites = await SupabaseService.getFavorites();
+      await loadUserData();
       renderAllSections();
-      if (profileDropdown) profileDropdown.classList.add('hidden');
-    });
-  }
-
-  if (closeAuthBtn) closeAuthBtn.addEventListener('click', closeAuthModal);
-  if (authModal) {
-    authModal.addEventListener('click', (e) => {
-      if (e.target === authModal) closeAuthModal();
-    });
-  }
-
-  if (tabLoginBtn) tabLoginBtn.addEventListener('click', () => openAuthModal('login'));
-  if (tabSignupBtn) tabSignupBtn.addEventListener('click', () => openAuthModal('signup'));
-
-  if (togglePwdBtn && authPwdInput) {
-    togglePwdBtn.addEventListener('click', () => {
-      const isPwd = authPwdInput.type === 'password';
-      authPwdInput.type = isPwd ? 'text' : 'password';
-      togglePwdBtn.innerHTML = isPwd ? '<i class="fa-regular fa-eye-slash"></i>' : '<i class="fa-regular fa-eye"></i>';
-    });
-  }
-
-  // Connexion Google OAuth (nécessite que le fournisseur Google soit activé dans Supabase > Authentication > Providers)
-  if (googleLoginBtn) {
-    googleLoginBtn.addEventListener('click', async () => {
-      try {
-        if (authErrorMsg) authErrorMsg.classList.add('hidden');
-        await AuthService.loginWithGoogle();
-      } catch (err) {
-        if (authErrorMsg) {
-          authErrorMsg.textContent = err.message || 'Une erreur est survenue.';
-          authErrorMsg.classList.remove('hidden');
-        }
+      closeAuthModal();
+      DOM.authForm.reset();
+    } catch (err) {
+      if (DOM.authErrorMsg) {
+        DOM.authErrorMsg.textContent = err.message || 'Une erreur est survenue.';
+        DOM.authErrorMsg.classList.remove('hidden');
       }
-    });
-  }
-
-  // Soumission du Formulaire (E-mail / Password) - branché sur Supabase Auth
-  if (authForm) {
-    authForm.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const email = document.getElementById('auth-email').value.trim();
-      const password = document.getElementById('auth-password').value;
-      const name = document.getElementById('auth-name').value;
-
-      const originalBtnText = authSubmitBtn ? authSubmitBtn.textContent : '';
-      try {
-        if (authErrorMsg) authErrorMsg.classList.add('hidden');
-        if (authSubmitBtn) {
-          authSubmitBtn.disabled = true;
-          authSubmitBtn.textContent = 'Patientez...';
-        }
-
-        if (currentAuthMode === 'login') {
-          await AuthService.login(email, password);
-        } else {
-          await AuthService.signup(name, email, password);
-        }
-
-        updateAuthHeaderUI();
-        state.favorites = await SupabaseService.getFavorites();
-        renderAllSections();
-        closeAuthModal();
-        authForm.reset();
-      } catch (err) {
-        if (authErrorMsg) {
-          authErrorMsg.textContent = err.message || 'Une erreur est survenue.';
-          authErrorMsg.classList.remove('hidden');
-        }
-      } finally {
-        if (authSubmitBtn) {
-          authSubmitBtn.disabled = false;
-          authSubmitBtn.textContent = originalBtnText;
-        }
+    } finally {
+      if (DOM.authSubmitBtn) {
+        DOM.authSubmitBtn.disabled = false;
+        DOM.authSubmitBtn.textContent = originalBtnText;
       }
-    });
-  }
+    }
+  });
 
-  // Initialisation UI Auth au démarrage
-  updateAuthHeaderUI();
+  // Raccourcis Clavier Globaux
+  document.addEventListener('keydown', (e) => {
+    if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
 
-  // --- INFO & LEGAL MODAL LOGIC (À PROPOS, CONFIDENTIALITÉ, CONDITIONS) ---
-  const infoModal = document.getElementById('info-modal');
-  const closeInfoModalBtn = document.getElementById('close-info-modal-btn');
-  const infoModalTitle = document.getElementById('info-modal-title');
-  const infoModalBody = document.getElementById('info-modal-body');
-  const infoTabAbout = document.getElementById('info-tab-about');
-  const infoTabPrivacy = document.getElementById('info-tab-privacy');
-  const infoTabTerms = document.getElementById('info-tab-terms');
-
-  const infoContents = {
-    about: `
-      <div class="about-dev-box">
-        <div class="dev-avatar-badge">S</div>
-        <div class="dev-bio">
-          <h3>Développé avec passion par <span class="highlight-gold">Space</span></h3>
-          <p>SpaceFlix est une plateforme de streaming moderne, fluide et ultra-épurée conçue pour offrir la meilleure expérience vidéo sans pub ni inscription obligatoire.</p>
-        </div>
-      </div>
-
-      <h4 class="info-subtitle"><i class="fa-solid fa-address-card"></i> Coordonnées & Contacts Officiels</h4>
-      <div class="contact-cards-grid">
-        <a href="https://wa.me/50946966290" target="_blank" class="contact-card whatsapp">
-          <div class="contact-icon"><i class="fa-brands fa-whatsapp"></i></div>
-          <div class="contact-info">
-            <span class="contact-label">WhatsApp Direct</span>
-            <span class="contact-value">+509 4696 6290</span>
-          </div>
-        </a>
-
-        <a href="mailto:ogspacetech@gmail.com" class="contact-card email">
-          <div class="contact-icon"><i class="fa-regular fa-envelope"></i></div>
-          <div class="contact-info">
-            <span class="contact-label">Support E-mail</span>
-            <span class="contact-value">ogspacetech@gmail.com</span>
-          </div>
-        </a>
-
-        <a href="https://github.com/Christian667z" target="_blank" class="contact-card github">
-          <div class="contact-icon"><i class="fa-brands fa-github"></i></div>
-          <div class="contact-info">
-            <span class="contact-label">GitHub Officiel</span>
-            <span class="contact-value">Christian667z</span>
-          </div>
-        </a>
-      </div>
-    `,
-    privacy: `
-      <h4 class="info-subtitle"><i class="fa-solid fa-user-shield"></i> Protection de vos Données Personnelles</h4>
-      <p class="info-text">Chez SpaceFlix, le respect de la vie privée est une priorité. Voici notre engagement :</p>
-
-      <ul class="info-list">
-        <li><strong>Stockage Local Réseau :</strong> Vos favoris ("Ma liste") et vos sessions de compte sont conservés localement sur votre appareil (LocalStorage).</li>
-        <li><strong>Zéro Revente de Données :</strong> Nous ne collectons et ne revendons aucune donnée personnelle à des tiers ou régies publicitaires.</li>
-        <li><strong>Connexion Google :</strong> Les données récupérées via l'authentification Google (Nom & E-mail) servent exclusivement à vous identifier sur l'interface.</li>
-      </ul>
-
-      <p class="info-footer-note">Pour toute question sur la gestion de vos données, contactez le développeur Space à <a href="mailto:ogspacetech@gmail.com">ogspacetech@gmail.com</a>.</p>
-    `,
-    terms: `
-      <h4 class="info-subtitle"><i class="fa-solid fa-file-contract"></i> Conditions Générales d'Utilisation</h4>
-      <p class="info-text">En naviguant sur SpaceFlix, vous acceptez les règles suivantes :</p>
-
-      <ul class="info-list">
-        <li><strong>Avertissement sur les Contenus :</strong> SpaceFlix n'héberge et ne stocke aucun fichier vidéo sur ses serveurs. Le contenu est agrégé et diffusé à travers des lecteurs tiers publics.</li>
-        <li><strong>Accès Libre et Gratuit :</strong> La plateforme est totalement gratuite. Aucun frais ni abonnement ne sera jamais facturé.</li>
-        <li><strong>Propriété Intellectuelle :</strong> Le design de l'interface et le nom SpaceFlix sont créés par <strong>Space</strong>.</li>
-      </ul>
-
-      <p class="info-footer-note">Pour toute demande d'information ou assistance technique, contactez Space sur WhatsApp au <a href="https://wa.me/50946966290" target="_blank">+509 4696 6290</a> ou par e-mail à <a href="mailto:ogspacetech@gmail.com">ogspacetech@gmail.com</a>.</p>
-    `
-  };
-
-  function openInfoModal(tab = 'about') {
-    if (!infoModal) return;
-    [infoTabAbout, infoTabPrivacy, infoTabTerms].forEach(t => t && t.classList.remove('active'));
-
-    if (tab === 'about') {
-      if (infoTabAbout) infoTabAbout.classList.add('active');
-      if (infoModalTitle) infoModalTitle.textContent = 'À Propos de Space';
-      if (infoModalBody) infoModalBody.innerHTML = infoContents.about;
-    } else if (tab === 'privacy') {
-      if (infoTabPrivacy) infoTabPrivacy.classList.add('active');
-      if (infoModalTitle) infoModalTitle.textContent = 'Politique de Confidentialité';
-      if (infoModalBody) infoModalBody.innerHTML = infoContents.privacy;
-    } else if (tab === 'terms') {
-      if (infoTabTerms) infoTabTerms.classList.add('active');
-      if (infoModalTitle) infoModalTitle.textContent = "Conditions d'Utilisation";
-      if (infoModalBody) infoModalBody.innerHTML = infoContents.terms;
+    if (e.key === 'Escape') {
+      if (DOM.playerModal?.classList.contains('active')) closePlayerModal();
+      if (!DOM.authModal?.classList.contains('hidden')) closeAuthModal();
+      if (!DOM.shortcutsModal?.classList.contains('hidden')) DOM.shortcutsModal.classList.add('hidden');
+      if (!DOM.sqlModal?.classList.contains('hidden')) DOM.sqlModal.classList.add('hidden');
     }
 
-    infoModal.classList.remove('hidden');
-    if (profileDropdown) profileDropdown.classList.add('hidden');
-  }
-
-  function closeInfoModal() {
-    if (infoModal) infoModal.classList.add('hidden');
-  }
-
-  if (closeInfoModalBtn) closeInfoModalBtn.addEventListener('click', closeInfoModal);
-  if (infoModal) {
-    infoModal.addEventListener('click', (e) => {
-      if (e.target === infoModal) closeInfoModal();
-    });
-  }
-
-  if (infoTabAbout) infoTabAbout.addEventListener('click', () => openInfoModal('about'));
-  if (infoTabPrivacy) infoTabPrivacy.addEventListener('click', () => openInfoModal('privacy'));
-  if (infoTabTerms) infoTabTerms.addEventListener('click', () => openInfoModal('terms'));
-
-  // Note: Legal links (Confidentialité, Conditions, À propos) navigate directly to dedicated full HTML pages (Confidentialité.html, Conditions.html, a_propos.html)
+    if (DOM.playerModal?.classList.contains('active')) {
+      if (e.code === 'Space') {
+        e.preventDefault();
+        togglePlayPause();
+      } else if (e.key === 'ArrowRight') {
+        state.playbackSeconds += 10;
+        saveCurrentPlayback();
+      } else if (e.key === 'ArrowLeft') {
+        state.playbackSeconds = Math.max(0, state.playbackSeconds - 10);
+        saveCurrentPlayback();
+      } else if (e.key === 'f' || e.key === 'F') {
+        if (!document.fullscreenElement) {
+          DOM.videoContainerWrap?.requestFullscreen().catch(() => {});
+        } else {
+          document.exitFullscreen().catch(() => {});
+        }
+      }
+    }
+  });
 }
