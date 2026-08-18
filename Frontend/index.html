@@ -27,6 +27,9 @@
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 
   <!-- Icons & Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="src/styles/main.css">
 </head>
@@ -73,10 +76,6 @@
 
           <!-- POPUP RESULTATS INSTANTANÉS (LIVE AUTOCOMPLETE) -->
           <div class="instant-search-dropdown hidden" id="instant-search-dropdown">
-            <div class="instant-search-header">
-              <span id="instant-search-count"><i class="fa-solid fa-bolt" style="color: #ff3344; margin-right: 4px;"></i> Suggestions en direct</span>
-              <button id="close-instant-search-btn" class="instant-search-close" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
-            </div>
             <div class="instant-search-results" id="instant-search-results">
               <!-- Rempli dynamiquement -->
             </div>
@@ -105,9 +104,6 @@
             </a>
             <a href="#" class="dropdown-item" id="dropdown-login-trigger">
               <i class="fa-solid fa-user"></i> <span id="dropdown-action-label">Se connecter / S'inscrire</span>
-            </a>
-            <a href="#" class="dropdown-item" id="dropdown-zip-download-btn">
-              <i class="fa-solid fa-file-zipper" style="color: #ff3344;"></i> Télécharger le ZIP du projet
             </a>
             <a href="#" class="dropdown-item" id="dropdown-sql-btn">
               <i class="fa-solid fa-database" style="color: #E50914;"></i> Script Supabase SQL
@@ -677,11 +673,6 @@ ON public.user_history FOR ALL USING (auth.uid() = user_id);</code></pre>
           <div class="sc-pill-badge">
             <i class="fa-solid fa-clock-rotate-left sc-pill-icon"></i> Reprise de Lecture Auto
           </div>
-          <a href="/download-zip" style="text-decoration: none;">
-            <div class="sc-pill-badge" style="border-color: rgba(0,242,254,0.4);">
-              <i class="fa-solid fa-download sc-pill-icon" style="color: #00f2fe;"></i> ZIP Téléchargeable
-            </div>
-          </a>
         </div>
       </div>
     </div>
@@ -699,8 +690,6 @@ ON public.user_history FOR ALL USING (auth.uid() = user_id);</code></pre>
       </div>
 
       <div class="sc-bottom-right">
-        <a href="/download-zip" style="color: #00f2fe; font-weight: 600;"><i class="fa-solid fa-file-zipper"></i> ZIP Projet</a>
-        <span class="sc-dot">•</span>
         <a href="privacy.html" id="bottom-privacy-btn"><i class="fa-solid fa-user-shield"></i> Confidentialité</a>
         <span class="sc-dot">•</span>
         <a href="terms.html" id="bottom-terms-btn"><i class="fa-solid fa-scale-balanced"></i> Conditions Générales</a>

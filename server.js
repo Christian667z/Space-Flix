@@ -2,11 +2,10 @@ import express from 'express';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import archiverPkg from 'archiver';
+import { createRequire } from 'module';
 
-const archiver = typeof archiverPkg === 'function'
-  ? archiverPkg
-  : (archiverPkg?.default || archiverPkg?.archiver || archiverPkg);
+const require = createRequire(import.meta.url);
+const archiver = require('archiver');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
