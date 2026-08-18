@@ -4389,6 +4389,425 @@ body {
    FREEHANDYFLIX DETAILS PAGE & VIDEO PLAYER (NOIR & ROUGE)
    ====================================================== */
 
+/* SpaceFlix watch page: dark, calm and close to the reference layout. */
+.modal-backdrop {
+  padding: 0;
+  background: rgba(0, 0, 0, 0.94);
+  backdrop-filter: blur(14px);
+}
+
+.handy-style-modal {
+  width: min(1100px, 100vw);
+  max-width: 1100px;
+  height: 100vh;
+  max-height: 100vh;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: #020305;
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.95);
+}
+
+.handy-modal-topbar {
+  min-height: 58px;
+  padding: 0.9rem 1.4rem;
+  background: rgba(2, 3, 5, 0.92);
+  border-bottom-color: rgba(255, 255, 255, 0.08);
+}
+
+.btn-back-handy {
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.12);
+  font-weight: 600;
+}
+
+.btn-back-handy:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: none;
+}
+
+.handy-now-playing-title .np-label {
+  color: #7e8b9e;
+}
+
+.handy-quality-tag-top {
+  background: rgba(24, 139, 255, 0.13);
+  border-color: rgba(24, 139, 255, 0.55);
+  color: #64b4ff;
+}
+
+.handy-details-hero-section {
+  padding: 4.25rem clamp(1.25rem, 7vw, 5rem) 2.2rem;
+  background: #020305;
+}
+
+.handy-backdrop-blur {
+  filter: blur(42px) brightness(0.18) saturate(0.75);
+  opacity: 0.55;
+}
+
+.handy-details-container {
+  grid-template-columns: 160px minmax(0, 1fr);
+  gap: clamp(1.4rem, 4vw, 2.2rem);
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.handy-poster-card {
+  max-width: 160px;
+  border-radius: 16px;
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.72);
+}
+
+.handy-poster-tag {
+  bottom: 8px;
+  border-color: rgba(255, 255, 255, 0.22);
+  background: rgba(0, 0, 0, 0.7);
+  font-size: 0.62rem;
+  padding: 0.2rem 0.85rem;
+}
+
+.handy-info-column {
+  gap: 0.9rem;
+}
+
+.handy-sub-badge {
+  color: #8995a6;
+  font-size: 0.65rem;
+  letter-spacing: 0.13em;
+}
+
+.handy-title-text {
+  font-size: clamp(2rem, 4vw, 3rem);
+  letter-spacing: -0.04em;
+}
+
+.handy-badge {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+}
+
+.handy-badge.star-badge {
+  background: rgba(24, 139, 255, 0.13);
+  border-color: rgba(24, 139, 255, 0.35);
+}
+
+.handy-badge.star-badge i {
+  color: #65b5ff !important;
+}
+
+.handy-badge.quality-pill {
+  background: rgba(255, 255, 255, 0.08);
+  color: #dbeafe;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.genre-pill-handy {
+  background: rgba(255, 255, 255, 0.045);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #aab4c2;
+}
+
+.handy-btn-play-main {
+  padding: 0.9rem 1.1rem;
+  box-shadow: 0 12px 30px rgba(255, 255, 255, 0.08);
+}
+
+.handy-btn-play-main:hover {
+  background: #188bff;
+  box-shadow: 0 12px 32px rgba(24, 139, 255, 0.34);
+}
+
+.handy-action-card {
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.handy-action-card:hover,
+.handy-action-card.saved-active {
+  background: rgba(24, 139, 255, 0.12);
+  border-color: rgba(24, 139, 255, 0.55);
+  color: #fff;
+}
+
+.handy-lang-block {
+  background: rgba(3, 9, 20, 0.85);
+  border-color: rgba(24, 139, 255, 0.24);
+  padding: 1.15rem;
+}
+
+.lang-icon-wrap {
+  background: rgba(24, 139, 255, 0.13);
+  border-color: rgba(24, 139, 255, 0.35);
+  color: #61b2ff;
+}
+
+.lang-default-badge,
+.lang-tab-btn.active {
+  background: rgba(24, 139, 255, 0.18);
+  border-color: rgba(24, 139, 255, 0.48);
+  color: #7fc4ff;
+}
+
+.lang-card.active {
+  background: rgba(24, 139, 255, 0.16);
+  border-color: rgba(24, 139, 255, 0.65);
+}
+
+.lang-card:hover {
+  border-color: rgba(24, 139, 255, 0.5);
+  background: rgba(24, 139, 255, 0.08);
+}
+
+.lang-card .lang-check-icon {
+  color: #65b5ff !important;
+}
+
+.server-title {
+  color: #70baff;
+}
+
+.server-btn.active,
+.server-btn:hover {
+  background: rgba(24, 139, 255, 0.18);
+  border-color: rgba(24, 139, 255, 0.6);
+  color: #e7f4ff;
+  box-shadow: none;
+}
+
+/* Recommendation rail, shown under the film details. */
+.similar-media-section {
+  padding: 1.2rem clamp(1.25rem, 7vw, 5rem) 2.8rem;
+  background: #020305;
+}
+
+.similar-media-section.hidden {
+  display: none;
+}
+
+.similar-section-heading {
+  max-width: 860px;
+  margin: 0 auto 1.1rem;
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.similar-eyebrow {
+  color: #7a8797;
+  display: block;
+  font-size: 0.63rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  margin-bottom: 0.35rem;
+}
+
+.similar-section-heading h2 {
+  margin: 0;
+  color: #f3f6fb;
+  font-size: 1.25rem;
+  letter-spacing: -0.025em;
+}
+
+.similar-section-line {
+  width: 30px;
+  height: 3px;
+  background: #188bff;
+  border-radius: 5px;
+  margin-bottom: 0.35rem;
+}
+
+.similar-media-track {
+  max-width: 860px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(6, minmax(105px, 1fr));
+  gap: 0.85rem;
+  overflow: hidden;
+}
+
+.similar-media-card {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.similar-poster-wrap {
+  display: block;
+  position: relative;
+  aspect-ratio: 2 / 3;
+  overflow: hidden;
+  border-radius: 13px;
+  background: #11151c;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.45);
+}
+
+.similar-poster-wrap img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+  transition: transform 0.3s ease, filter 0.3s ease;
+}
+
+.similar-media-card:hover .similar-poster-wrap img {
+  transform: scale(1.05);
+  filter: brightness(0.68);
+}
+
+.similar-play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  font-size: 1rem;
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.similar-media-card:hover .similar-play {
+  opacity: 1;
+}
+
+.similar-card-title,
+.similar-card-meta {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.similar-card-title {
+  color: #e3e8ef;
+  font-size: 0.73rem;
+  font-weight: 700;
+  margin-top: 0.55rem;
+}
+
+.similar-card-meta {
+  color: #718096;
+  font-size: 0.66rem;
+  margin-top: 0.2rem;
+}
+
+.similar-card-meta b {
+  color: #188bff;
+  margin: 0 0.15rem;
+}
+
+.similar-empty {
+  color: #7a8797;
+  font-size: 0.85rem;
+}
+
+.player-wrapper-handy {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.loader-spinner {
+  border-color: rgba(24, 139, 255, 0.2);
+  border-top-color: #188bff;
+}
+
+.btn-ctrl-play {
+  background: #188bff;
+  box-shadow: 0 0 15px rgba(24, 139, 255, 0.45);
+}
+
+.btn-ctrl-icon:hover {
+  background: rgba(24, 139, 255, 0.16);
+  border-color: rgba(24, 139, 255, 0.55);
+  color: #70baff;
+}
+
+.volume-slider {
+  accent-color: #188bff;
+}
+
+.quality-select-wrapper .quality-select {
+  background: rgba(24, 139, 255, 0.13);
+  border-color: rgba(24, 139, 255, 0.5);
+  color: #7fc4ff;
+}
+
+@media (max-width: 820px) {
+  .handy-style-modal {
+    width: 100vw;
+    border-radius: 0;
+  }
+
+  .handy-details-hero-section {
+    padding-top: 2.5rem;
+  }
+
+  .handy-details-container {
+    grid-template-columns: 112px minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .handy-poster-card {
+    max-width: 112px;
+  }
+
+  .handy-title-text {
+    font-size: 1.65rem;
+  }
+
+  .similar-media-track {
+    grid-template-columns: repeat(4, minmax(92px, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .handy-details-container {
+    grid-template-columns: 1fr;
+  }
+
+  .handy-poster-column {
+    justify-content: flex-start;
+  }
+
+  .handy-poster-card {
+    max-width: 132px;
+  }
+
+  .handy-action-cards-grid {
+    gap: 0.45rem;
+  }
+
+  .handy-action-card .card-label {
+    font-size: 0.7rem;
+  }
+
+  .similar-media-track {
+    grid-template-columns: repeat(3, minmax(84px, 1fr));
+  }
+
+  .handy-player-controls-bar {
+    padding: 0.55rem;
+    gap: 0.35rem;
+  }
+
+  .ctrl-left,
+  .ctrl-right {
+    gap: 0.3rem;
+  }
+
+  .volume-slider {
+    display: none;
+  }
+}
+
 .handy-style-modal {
   max-width: 1100px;
   width: 95vw;

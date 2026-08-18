@@ -153,6 +153,8 @@ const DOM = {
   seriesEpisodesWrapper: document.getElementById('series-episodes-wrapper'),
   seasonSelect: document.getElementById('season-select'),
   episodesContainer: document.getElementById('episodes-container'),
+  similarMediaSection: document.getElementById('similar-media-section'),
+  similarMediaTrack: document.getElementById('similar-media-track'),
 
   // Modals & Download
   downloadModal: document.getElementById('download-modal'),
@@ -961,9 +963,11 @@ export function showToast(message) {
 function startPlaybackNow() {
   const handyHero = document.getElementById('handy-details-hero-section');
   const handyPlayerWrap = document.getElementById('player-wrapper-handy');
+  const similarSection = document.getElementById('similar-media-section');
   const loader = document.getElementById('player-loading-overlay');
   
   if (handyHero) handyHero.style.display = 'none';
+  if (similarSection) similarSection.classList.add('hidden');
   if (handyPlayerWrap) handyPlayerWrap.classList.remove('hidden');
   
   if (loader) {
@@ -984,31 +988,13 @@ function startPlaybackNow() {
 }
 
 function updateSaveButtonsUI(isFav) {
-  const saveBtn = document.getElementById('btn-action-save');
-  const listBtn = document.getElementById('btn-action-list');
-
-  [saveBtn, listBtn].forEach(btn => {
-    if (!btn) return;
-    if (isFav) {
-      btn.classList.add('saved-active');
-      const label = btn.querySelector('.card-label');
-      if (label) label.textContent = 'Sauvegardé';
-      const icon = btn.querySelector('i');
-      if (icon) icon.className = 'fa-solid fa-bookmark';
-    } else {
-      btn.classList.remove('saved-active');
-      const label = btn.querySelector('.card-label');
-      if (label) {
-        if (btn.id === 'btn-action-save') label.textContent = 'Sauvegarder';
-        if (btn.id === 'btn-action-list') label.textContent = '+ Liste';
-      }
-      const icon = btn.querySelector('i');
-      if (icon) {
-        if (btn.id === 'btn-action-save') icon.className = 'fa-regular fa-bookmark';
-        if (btn.id === 'btn-action-list') icon.className = 'fa-solid fa-plus';
-      }
-    }
-  });
+  const listBtn = DOM.modalFavBtn;
+  if (!listBtn) return;
+  listBtn.classList.toggle('saved-active', isFav);
+  const label = listBtn.querySelector('.card-label');
+  if (label) label.textContent = isFav ? 'Dans ma liste' : 'Liste';
+  const icon = listBtn.querySelector('i');
+  if (icon) icon.className = isFav ? 'fa-solid fa-check' : 'fa-solid fa-plus';
 }
 
 // --- LECTEUR VIDÉO SUR MESURE AVEC BANDES-ANNONCES TMDB ---
@@ -1025,17 +1011,16 @@ export async function openPlayerModal(media, seasonNumber = 1, episodeNumber = 1
   if (DOM.playerErrorOverlay) DOM.playerErrorOverlay.classList.add('hidden');
 
   // Champs de l'interface Freehandyflix
-  const topbarTitle = document.getElementById('topbar-media-title');
-  const handyTitle = document.getElementById('handy-title');
+  const topbarTitle = document.getElementById('modal-now-playing-title');
+  const handyTitle = document.getElementById('modal-title');
   const handyBackdrop = document.getElementById('handy-backdrop-blur');
-  const handyPoster = document.getElementById('handy-poster-img');
-  const handyPosterTag = document.getElementById('handy-poster-type-tag');
-  const handyRating = document.getElementById('handy-rating-star');
-  const handyYear = document.getElementById('handy-year-badge');
-  const handyType = document.getElementById('handy-type-badge');
-  const handyDuration = document.getElementById('handy-duration-badge');
-  const handyGenresRow = document.getElementById('handy-genres-row');
-  const handySynopsis = document.getElementById('handy-synopsis');
+  const handyPoster = document.getElementById('modal-poster-img');
+  const handyPosterTag = document.getElementById('modal-media-type-tag');
+  const handyRating = document.getElementById('modal-rating');
+  const handyYear = document.getElementById('modal-year');
+  const handyDuration = document.getElementById('modal-duration');
+  const handyGenresRow = document.getElementById('modal-genres-tags');
+  const handySynopsis = document.getElementById('modal-synopsis');
 
   const titleVal = media.title || 'Dune: Deuxième Partie';
   const yearVal = media.release_year || '2026';
@@ -1049,13 +1034,14 @@ export async function openPlayerModal(media, seasonNumber = 1, episodeNumber = 1
   if (handyPosterTag) handyPosterTag.textContent = media.type === 'movie' ? 'FILM' : 'SÉRIE';
   if (handyRating) handyRating.innerHTML = `<i class="fa-solid fa-star" style="color: #E50914;"></i> ${media.rating || '8.5'}`;
   if (handyYear) handyYear.textContent = yearVal;
-  if (handyType) handyType.textContent = media.type === 'movie' ? 'FILM' : 'SÉRIE';
   if (handyDuration) handyDuration.textContent = media.duration || (media.type === 'movie' ? '2h 10m' : '1 Saison');
   if (handySynopsis) handySynopsis.textContent = media.synopsis || 'Aucun synopsis disponible pour le moment.';
 
   if (handyGenresRow) {
     handyGenresRow.innerHTML = (media.genres || ['Action', 'Sci-Fi']).map(g => `<span class="genre-pill-handy">${g}</span>`).join('');
   }
+
+  renderSimilarMedia(media);
 
   // Compatibilité sélecteurs existants DOM
   if (DOM.modalTitle) DOM.modalTitle.textContent = titleVal;
@@ -1068,6 +1054,7 @@ export async function openPlayerModal(media, seasonNumber = 1, episodeNumber = 1
   const handyHero = document.getElementById('handy-details-hero-section');
   const handyPlayerWrap = document.getElementById('player-wrapper-handy');
   if (handyHero) handyHero.style.display = 'block';
+  if (DOM.similarMediaSection) DOM.similarMediaSection.classList.remove('hidden');
   if (handyPlayerWrap) handyPlayerWrap.classList.add('hidden');
 
   // Synchronisation des boutons Sauvegarder / Liste
@@ -1123,6 +1110,54 @@ function updateSourceTabsUI() {
       DOM.tabStreamFull.classList.remove('active');
     }
   }
+}
+
+function renderSimilarMedia(activeMedia) {
+  if (!DOM.similarMediaTrack || !activeMedia) return;
+
+  const activeGenres = new Set(activeMedia.genres || []);
+  const recommendations = state.mediaList
+    .filter(item => item && item.id !== activeMedia.id)
+    .map(item => ({
+      item,
+      score: (item.type === activeMedia.type ? 3 : 0)
+        + (item.genres || []).filter(genre => activeGenres.has(genre)).length * 2
+        + (item.is_trending ? 1 : 0)
+    }))
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 8)
+    .map(({ item }) => item);
+
+  if (!recommendations.length) {
+    DOM.similarMediaTrack.innerHTML = '<p class="similar-empty">D’autres recommandations apparaîtront bientôt.</p>';
+    return;
+  }
+
+  DOM.similarMediaTrack.innerHTML = recommendations.map(item => {
+    const poster = item.poster_url || getFallbackPoster(item.title, item.release_year);
+    const safeTitle = String(item.title || 'Titre sans nom')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+    return `
+      <button class="similar-media-card" type="button" data-similar-id="${item.id}" aria-label="Regarder ${safeTitle}">
+        <span class="similar-poster-wrap">
+          <img src="${poster}" alt="${safeTitle}" loading="lazy">
+          <span class="similar-play"><i class="fa-solid fa-play"></i></span>
+        </span>
+        <span class="similar-card-title">${safeTitle}</span>
+        <span class="similar-card-meta">${item.release_year || '—'} <b>•</b> ${item.type === 'movie' ? 'Film' : 'Série'}</span>
+      </button>
+    `;
+  }).join('');
+
+  DOM.similarMediaTrack.querySelectorAll('.similar-media-card').forEach(card => {
+    card.addEventListener('click', () => {
+      const selected = state.mediaList.find(item => item.id === card.dataset.similarId);
+      if (selected) openPlayerModal(selected);
+    });
+  });
 }
 
 function generateDefaultServers(media, season = 1, episode = 1) {
@@ -1335,14 +1370,11 @@ function togglePlayPause() {
 }
 
 function updatePlayPauseButtonUI() {
-  if (DOM.playPauseIcon && DOM.playPauseLabel) {
-    if (state.isPlaying) {
-      DOM.playPauseIcon.className = 'fa-solid fa-pause';
-      DOM.playPauseLabel.textContent = 'Pause';
-    } else {
-      DOM.playPauseIcon.className = 'fa-solid fa-play';
-      DOM.playPauseLabel.textContent = 'Lecture';
-    }
+  if (DOM.playPauseIcon) {
+    DOM.playPauseIcon.className = state.isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play';
+  }
+  if (DOM.playPauseLabel) {
+    DOM.playPauseLabel.textContent = state.isPlaying ? 'Pause' : 'Lecture';
   }
 }
 
@@ -1785,15 +1817,17 @@ function setupEventListeners() {
   });
 
   // --- ÉCOUTEURS D'ÉVÉNEMENTS FREEHANDYFLIX ---
-  const btnBackHandy = document.getElementById('btn-back-handy');
+  const btnBackHandy = DOM.closePlayerBtn;
   btnBackHandy?.addEventListener('click', () => {
     const handyPlayerWrap = document.getElementById('player-wrapper-handy');
     const handyHero = document.getElementById('handy-details-hero-section');
+    const similarSection = document.getElementById('similar-media-section');
 
     if (handyPlayerWrap && !handyPlayerWrap.classList.contains('hidden')) {
       if (DOM.videoIframe) DOM.videoIframe.src = '';
       handyPlayerWrap.classList.add('hidden');
       if (handyHero) handyHero.style.display = 'block';
+      if (similarSection) similarSection.classList.remove('hidden');
       stopPlaybackTracker();
     } else {
       closePlayerModal();
@@ -1908,8 +1942,19 @@ function setupEventListeners() {
     }
   });
 
-  // Fermeture Modal Player
-  DOM.closePlayerBtn?.addEventListener('click', closePlayerModal);
+  document.getElementById('modal-share-btn')?.addEventListener('click', async () => {
+    if (!state.activeMedia) return;
+    const shareUrl = `${window.location.origin}${window.location.pathname}#media-${state.activeMedia.id}`;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      showToast('Lien copié dans le presse-papier !');
+    } catch {
+      showToast('Lien de partage prêt à être copié.');
+    }
+  });
+
+  // La fermeture du bouton Retour est gérée ci-dessus : elle revient d'abord
+  // aux détails lorsque le lecteur est ouvert.
   DOM.playerModal?.addEventListener('click', (e) => {
     if (e.target === DOM.playerModal) closePlayerModal();
   });
