@@ -333,6 +333,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateAuthHeaderUI();
   await loadUserData();
   await refreshCatalog();
+
+  if (window.location.pathname.includes('filters.html')) {
+    state.currentNav = 'filters';
+  }
 });
 
 // Scroll fluide de la barre de navigation
@@ -613,7 +617,7 @@ function renderHero(media) {
 
     if (DOM.heroTitle) DOM.heroTitle.textContent = titleVal;
     if (DOM.heroSynopsis) DOM.heroSynopsis.textContent = media.synopsis || 'Aucun synopsis disponible.';
-    if (DOM.heroRating) DOM.heroRating.innerHTML = `<i class="fa-solid fa-star" style="color: #fbbf24;"></i> ${media.rating || '8.5'}`;
+    if (DOM.heroRating) DOM.heroRating.innerHTML = `<i class="fa-solid fa-star" style="color: #E50914;"></i> ${media.rating || '8.5'}`;
     if (DOM.heroYear) DOM.heroYear.textContent = yearVal;
     if (DOM.heroType) DOM.heroType.textContent = media.type === 'movie' ? 'FILM' : 'SÉRIE';
     if (DOM.heroGenres) DOM.heroGenres.textContent = (media.genres || ['Action', 'Sci-Fi']).join(' • ');
@@ -756,16 +760,11 @@ export async function applyAdvancedFilters(resetPage = true) {
 
   const isDefault = type === 'all' && genre === 'Tous' && year === 'all' && lang === 'all' && sortBy === 'popularity.desc';
   
-  // Si on est sur la page d'accueil et tous les filtres sont par défaut, on rétablit la vue classique
-  if (isDefault && state.currentNav === 'home') {
-    state.isFilterActive = false;
-    if (DOM.filteredResultsWrapper) DOM.filteredResultsWrapper.style.display = 'none';
-    if (DOM.trendingSection) DOM.trendingSection.style.display = 'block';
-    if (DOM.moviesSection) DOM.moviesSection.style.display = 'block';
-    if (DOM.tvSection) DOM.tvSection.style.display = 'block';
-    if (DOM.latestSection) DOM.latestSection.style.display = 'block';
-    return;
-  }
+  // Masquer le placeholder initial et afficher le conteneur de résultats
+  const initialPlaceholder = document.getElementById('filter-initial-placeholder');
+  const resultsContentBox = document.getElementById('results-content-box');
+  if (initialPlaceholder) initialPlaceholder.style.display = 'none';
+  if (resultsContentBox) resultsContentBox.classList.remove('hidden');
 
   state.isFilterActive = true;
 
@@ -824,6 +823,11 @@ export async function applyAdvancedFilters(resetPage = true) {
 
     renderMediaGrid(DOM.filteredCatalogGrid, state.filterMediaList);
 
+    const countBadge = document.getElementById('catalog-count-badge');
+    if (countBadge) {
+      countBadge.textContent = `${state.filterMediaList.length} titre${state.filterMediaList.length > 1 ? 's' : ''} trouvé${state.filterMediaList.length > 1 ? 's' : ''}`;
+    }
+
     if (DOM.btnLoadMoreCatalog) {
       DOM.btnLoadMoreCatalog.style.display = results.length > 0 ? 'inline-flex' : 'none';
     }
@@ -844,7 +848,16 @@ export function resetAdvancedFilters() {
   state.filterPage = 1;
   state.filterMediaList = [];
   state.isFilterActive = false;
-  applyAdvancedFilters(true);
+
+  if (window.location.pathname.includes('filters.html')) {
+    const initialPlaceholder = document.getElementById('filter-initial-placeholder');
+    const resultsContentBox = document.getElementById('results-content-box');
+    if (initialPlaceholder) initialPlaceholder.style.display = 'block';
+    if (resultsContentBox) resultsContentBox.classList.add('hidden');
+    if (DOM.filteredCatalogGrid) DOM.filteredCatalogGrid.innerHTML = '';
+  } else {
+    applyAdvancedFilters(true);
+  }
 }
 
 // --- RECHERCHE INSTANTANÉE EN DIRECT (AUTOCOMPLÉTION & APERÇU) ---
@@ -929,6 +942,75 @@ function setupLiveInstantSearch() {
   });
 }
 
+// --- NOTIFICATION TOAST SPACEFLIX ---
+export function showToast(message) {
+  let toast = document.getElementById('spaceflix-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'spaceflix-toast';
+    toast.className = 'spaceflix-toast';
+    document.body.appendChild(toast);
+  }
+  toast.innerHTML = `<i class="fa-solid fa-circle-check" style="color: #E50914;"></i> <span>${message}</span>`;
+  toast.classList.add('show');
+  setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3000);
+}
+
+function startPlaybackNow() {
+  const handyHero = document.getElementById('handy-details-hero-section');
+  const handyPlayerWrap = document.getElementById('player-wrapper-handy');
+  const loader = document.getElementById('player-loading-overlay');
+  
+  if (handyHero) handyHero.style.display = 'none';
+  if (handyPlayerWrap) handyPlayerWrap.classList.remove('hidden');
+  
+  if (loader) {
+    loader.classList.remove('hidden');
+    setTimeout(() => {
+      loader.classList.add('hidden');
+    }, 1000);
+  }
+
+  if (state.playerMode === 'trailer') {
+    loadTrailerVideo();
+  } else {
+    const servers = state.activeMedia?.video_servers || generateDefaultServers(state.activeMedia, state.activeSeason, state.activeEpisodeNumber);
+    loadVideoIframe(servers[state.activeServerIndex]?.url || servers[0]?.url);
+  }
+
+  startPlaybackTracker();
+}
+
+function updateSaveButtonsUI(isFav) {
+  const saveBtn = document.getElementById('btn-action-save');
+  const listBtn = document.getElementById('btn-action-list');
+
+  [saveBtn, listBtn].forEach(btn => {
+    if (!btn) return;
+    if (isFav) {
+      btn.classList.add('saved-active');
+      const label = btn.querySelector('.card-label');
+      if (label) label.textContent = 'Sauvegardé';
+      const icon = btn.querySelector('i');
+      if (icon) icon.className = 'fa-solid fa-bookmark';
+    } else {
+      btn.classList.remove('saved-active');
+      const label = btn.querySelector('.card-label');
+      if (label) {
+        if (btn.id === 'btn-action-save') label.textContent = 'Sauvegarder';
+        if (btn.id === 'btn-action-list') label.textContent = '+ Liste';
+      }
+      const icon = btn.querySelector('i');
+      if (icon) {
+        if (btn.id === 'btn-action-save') icon.className = 'fa-regular fa-bookmark';
+        if (btn.id === 'btn-action-list') icon.className = 'fa-solid fa-plus';
+      }
+    }
+  });
+}
+
 // --- LECTEUR VIDÉO SUR MESURE AVEC BANDES-ANNONCES TMDB ---
 export async function openPlayerModal(media, seasonNumber = 1, episodeNumber = 1, forceAutoResume = false, startAsTrailer = false) {
   state.activeMedia = media;
@@ -942,17 +1024,55 @@ export async function openPlayerModal(media, seasonNumber = 1, episodeNumber = 1
   if (DOM.videoContainerWrap) DOM.videoContainerWrap.classList.remove('theater-mode');
   if (DOM.playerErrorOverlay) DOM.playerErrorOverlay.classList.add('hidden');
 
-  DOM.modalTitle.textContent = media.title;
-  DOM.modalYear.textContent = media.release_year || '2026';
-  DOM.modalRating.innerHTML = `<i class="fa-solid fa-star"></i> ${media.rating || '8.0'}`;
-  DOM.modalDuration.textContent = media.duration || (media.type === 'movie' ? '2h 10m' : '1 Saison');
-  DOM.modalSynopsis.textContent = media.synopsis || 'Aucun synopsis disponible.';
+  // Champs de l'interface Freehandyflix
+  const topbarTitle = document.getElementById('topbar-media-title');
+  const handyTitle = document.getElementById('handy-title');
+  const handyBackdrop = document.getElementById('handy-backdrop-blur');
+  const handyPoster = document.getElementById('handy-poster-img');
+  const handyPosterTag = document.getElementById('handy-poster-type-tag');
+  const handyRating = document.getElementById('handy-rating-star');
+  const handyYear = document.getElementById('handy-year-badge');
+  const handyType = document.getElementById('handy-type-badge');
+  const handyDuration = document.getElementById('handy-duration-badge');
+  const handyGenresRow = document.getElementById('handy-genres-row');
+  const handySynopsis = document.getElementById('handy-synopsis');
 
-  DOM.modalGenresTags.innerHTML = (media.genres || ['Action']).map(g => `
-    <span class="badge badge-lang" style="font-size: 0.7rem;">${g}</span>
-  `).join('');
+  const titleVal = media.title || 'Dune: Deuxième Partie';
+  const yearVal = media.release_year || '2026';
+  const posterSrc = media.poster_url || getFallbackPoster(titleVal, yearVal);
+  const backdropSrc = media.backdrop_url || media.poster_url || posterSrc;
 
+  if (topbarTitle) topbarTitle.textContent = titleVal;
+  if (handyTitle) handyTitle.textContent = titleVal;
+  if (handyBackdrop) handyBackdrop.style.backgroundImage = `url('${backdropSrc}')`;
+  if (handyPoster) handyPoster.src = posterSrc;
+  if (handyPosterTag) handyPosterTag.textContent = media.type === 'movie' ? 'FILM' : 'SÉRIE';
+  if (handyRating) handyRating.innerHTML = `<i class="fa-solid fa-star" style="color: #E50914;"></i> ${media.rating || '8.5'}`;
+  if (handyYear) handyYear.textContent = yearVal;
+  if (handyType) handyType.textContent = media.type === 'movie' ? 'FILM' : 'SÉRIE';
+  if (handyDuration) handyDuration.textContent = media.duration || (media.type === 'movie' ? '2h 10m' : '1 Saison');
+  if (handySynopsis) handySynopsis.textContent = media.synopsis || 'Aucun synopsis disponible pour le moment.';
+
+  if (handyGenresRow) {
+    handyGenresRow.innerHTML = (media.genres || ['Action', 'Sci-Fi']).map(g => `<span class="genre-pill-handy">${g}</span>`).join('');
+  }
+
+  // Compatibilité sélecteurs existants DOM
+  if (DOM.modalTitle) DOM.modalTitle.textContent = titleVal;
+  if (DOM.modalYear) DOM.modalYear.textContent = yearVal;
+  if (DOM.modalRating) DOM.modalRating.innerHTML = `<i class="fa-solid fa-star"></i> ${media.rating || '8.5'}`;
+  if (DOM.modalDuration) DOM.modalDuration.textContent = media.duration || (media.type === 'movie' ? '2h 10m' : '1 Saison');
+  if (DOM.modalSynopsis) DOM.modalSynopsis.textContent = media.synopsis || 'Aucun synopsis disponible.';
+
+  // Affichage initial : Hero visible, Player caché
+  const handyHero = document.getElementById('handy-details-hero-section');
+  const handyPlayerWrap = document.getElementById('player-wrapper-handy');
+  if (handyHero) handyHero.style.display = 'block';
+  if (handyPlayerWrap) handyPlayerWrap.classList.add('hidden');
+
+  // Synchronisation des boutons Sauvegarder / Liste
   const isFav = await SupabaseService.isFavorite(media.id);
+  updateSaveButtonsUI(isFav);
   updateFavButtonUI(DOM.modalFavBtn, DOM.modalFavText, isFav);
 
   // Récupération asynchrone des bandes-annonces officielles TMDB
@@ -968,37 +1088,26 @@ export async function openPlayerModal(media, seasonNumber = 1, episodeNumber = 1
 
   // Configuration Séries vs Films
   if (media.type === 'tv') {
-    DOM.seriesEpisodesWrapper.style.display = 'block';
+    if (DOM.seriesEpisodesWrapper) DOM.seriesEpisodesWrapper.style.display = 'block';
     setupSeriesSelector(media);
   } else {
-    DOM.seriesEpisodesWrapper.style.display = 'none';
+    if (DOM.seriesEpisodesWrapper) DOM.seriesEpisodesWrapper.style.display = 'none';
     if (state.playerMode === 'trailer') {
-      loadTrailerVideo();
+      startPlaybackNow();
     } else {
       setupVideoServers(media.video_servers || generateDefaultServers(media));
     }
   }
 
-  // Vérification de la reprise de lecture automatique
+  // Reprise de lecture
   const savedProgress = await SupabaseService.getPlaybackProgress(media.id, state.activeSeason, state.activeEpisodeNumber);
-  
   if (savedProgress && savedProgress.current_time_seconds > 10) {
     state.playbackSeconds = savedProgress.current_time_seconds;
-    if (forceAutoResume) {
-      if (DOM.playerResumeBanner) DOM.playerResumeBanner.classList.add('hidden');
-    } else {
-      if (DOM.playerResumeBanner && DOM.resumeTimeText) {
-        DOM.resumeTimeText.textContent = formatTime(savedProgress.current_time_seconds);
-        DOM.playerResumeBanner.classList.remove('hidden');
-      }
-    }
-  } else {
-    if (DOM.playerResumeBanner) DOM.playerResumeBanner.classList.add('hidden');
   }
 
-  // Démarrer l'enregistrement de progression
-  startPlaybackTracker();
-  updatePlayPauseButtonUI();
+  if (startAsTrailer) {
+    startPlaybackNow();
+  }
 
   DOM.playerModal.classList.add('active');
   document.body.style.overflow = 'hidden';
@@ -1489,6 +1598,10 @@ function setupEventListeners() {
   // Navigation Links
   DOM.navLinks.forEach(link => {
     link.addEventListener('click', async (e) => {
+      const href = link.getAttribute('href');
+      if (href && href !== '#' && !href.startsWith('#') && !href.startsWith('javascript:')) {
+        return; // Navigation standard vers autre fichier HTML
+      }
       e.preventDefault();
       DOM.navLinks.forEach(l => l.classList.remove('active'));
       link.classList.add('active');
@@ -1502,6 +1615,9 @@ function setupEventListeners() {
       } else if (state.currentNav === 'tv') {
         if (DOM.filterTypeSelect) DOM.filterTypeSelect.value = 'tv';
         applyAdvancedFilters(true);
+      } else if (state.currentNav === 'filters') {
+        window.location.href = 'filters.html';
+        return;
       } else if (state.currentNav === 'home') {
         if (DOM.filterTypeSelect) DOM.filterTypeSelect.value = 'all';
         resetAdvancedFilters();
@@ -1514,8 +1630,16 @@ function setupEventListeners() {
   document.querySelectorAll('[data-nav]').forEach(el => {
     if (!el.classList.contains('nav-link')) {
       el.addEventListener('click', async (e) => {
+        const href = el.getAttribute('href');
+        if (href && href !== '#' && !href.startsWith('#') && !href.startsWith('javascript:')) {
+          return; // Laisser naviguer vers filters.html ou index.html
+        }
         e.preventDefault();
         const targetNav = el.getAttribute('data-nav');
+        if (targetNav === 'filters') {
+          window.location.href = 'filters.html';
+          return;
+        }
         state.currentNav = targetNav;
         const matchedLink = Array.from(DOM.navLinks).find(l => l.getAttribute('data-nav') === targetNav);
         if (matchedLink) {
@@ -1546,6 +1670,8 @@ function setupEventListeners() {
   DOM.filterLangSelect?.addEventListener('change', () => applyAdvancedFilters(true));
   DOM.filterSortSelect?.addEventListener('change', () => applyAdvancedFilters(true));
   DOM.btnResetFilters?.addEventListener('click', resetAdvancedFilters);
+  document.getElementById('btn-apply-filters')?.addEventListener('click', () => applyAdvancedFilters(true));
+  document.getElementById('btn-trigger-first-search')?.addEventListener('click', () => applyAdvancedFilters(true));
 
   // Pagination infinie / Charger plus de films
   DOM.btnLoadMoreCatalog?.addEventListener('click', () => {
@@ -1646,11 +1772,107 @@ function setupEventListeners() {
 
   // Plein écran
   DOM.btnFullscreenToggle?.addEventListener('click', () => {
+    const wrap = document.getElementById('player-wrapper-handy') || DOM.videoContainerWrap;
     if (!document.fullscreenElement) {
-      DOM.videoContainerWrap?.requestFullscreen().catch(() => {});
+      if (wrap && wrap.requestFullscreen) {
+        wrap.requestFullscreen().catch(() => {});
+      } else if (DOM.videoIframe && DOM.videoIframe.requestFullscreen) {
+        DOM.videoIframe.requestFullscreen().catch(() => {});
+      }
     } else {
       document.exitFullscreen().catch(() => {});
     }
+  });
+
+  // --- ÉCOUTEURS D'ÉVÉNEMENTS FREEHANDYFLIX ---
+  const btnBackHandy = document.getElementById('btn-back-handy');
+  btnBackHandy?.addEventListener('click', () => {
+    const handyPlayerWrap = document.getElementById('player-wrapper-handy');
+    const handyHero = document.getElementById('handy-details-hero-section');
+
+    if (handyPlayerWrap && !handyPlayerWrap.classList.contains('hidden')) {
+      if (DOM.videoIframe) DOM.videoIframe.src = '';
+      handyPlayerWrap.classList.add('hidden');
+      if (handyHero) handyHero.style.display = 'block';
+      stopPlaybackTracker();
+    } else {
+      closePlayerModal();
+    }
+  });
+
+  const btnMainPlayTrigger = document.getElementById('btn-main-play-trigger');
+  btnMainPlayTrigger?.addEventListener('click', () => {
+    state.playerMode = 'stream';
+    startPlaybackNow();
+  });
+
+  const btnActionSave = document.getElementById('btn-action-save');
+  const btnActionList = document.getElementById('btn-action-list');
+  const toggleSaveHandler = async () => {
+    if (state.activeMedia) {
+      const isFav = await SupabaseService.toggleFavorite(state.activeMedia.id);
+      updateSaveButtonsUI(isFav);
+      updateFavButtonUI(DOM.modalFavBtn, DOM.modalFavText, isFav);
+      state.favorites = await SupabaseService.getFavorites();
+      showToast(isFav ? 'Ajouté à votre liste !' : 'Retiré de votre liste.');
+    }
+  };
+  btnActionSave?.addEventListener('click', toggleSaveHandler);
+  btnActionList?.addEventListener('click', toggleSaveHandler);
+
+  const btnActionShare = document.getElementById('btn-action-share');
+  btnActionShare?.addEventListener('click', () => {
+    if (state.activeMedia) {
+      const shareUrl = window.location.origin + window.location.pathname + `#media-${state.activeMedia.id}`;
+      navigator.clipboard.writeText(shareUrl).then(() => {
+        showToast('Lien copié dans le presse-papier !');
+      }).catch(() => {
+        showToast(`SpaceFlix - ${state.activeMedia.title}`);
+      });
+    }
+  });
+
+  const btnCtrlPlayToggle = document.getElementById('btn-ctrl-play-toggle');
+  btnCtrlPlayToggle?.addEventListener('click', () => {
+    togglePlayPause();
+    const icon = btnCtrlPlayToggle.querySelector('i');
+    if (icon) {
+      icon.className = state.isPlaying ? 'fa-solid fa-pause' : 'fa-solid fa-play';
+    }
+  });
+
+  const btnCtrlPrev = document.getElementById('btn-ctrl-prev');
+  btnCtrlPrev?.addEventListener('click', () => {
+    state.playbackSeconds = Math.max(0, state.playbackSeconds - 10);
+    showToast('-10s');
+  });
+
+  const btnCtrlNext = document.getElementById('btn-ctrl-next');
+  btnCtrlNext?.addEventListener('click', () => {
+    state.playbackSeconds += 10;
+    showToast('+10s');
+  });
+
+  const ctrlQualitySelect = document.getElementById('ctrl-quality-select');
+  ctrlQualitySelect?.addEventListener('change', (e) => {
+    showToast(`Qualité changée: ${e.target.value}`);
+  });
+
+  // Doublage / Langues tabs & cards
+  document.querySelectorAll('.lang-tab-btn').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.lang-tab-btn').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+    });
+  });
+
+  document.querySelectorAll('.lang-card').forEach(card => {
+    card.addEventListener('click', () => {
+      document.querySelectorAll('.lang-card').forEach(c => c.classList.remove('active'));
+      card.classList.add('active');
+      const langName = card.querySelector('.lang-name')?.textContent || 'VF';
+      showToast(`Piste audio: ${langName}`);
+    });
   });
 
   // Erreur de flux & fallback

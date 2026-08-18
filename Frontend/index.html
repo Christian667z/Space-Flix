@@ -64,6 +64,7 @@
           <li><a href="#" class="nav-link" data-nav="movies">Films</a></li>
           <li><a href="#" class="nav-link" data-nav="trending">Nouveautés</a></li>
           <li><a href="#" class="nav-link" data-nav="favorites">Ma liste</a></li>
+          <li><a href="filters.html" class="nav-link"><i class="fa-solid fa-sliders" style="color: #E50914; margin-right: 4px;"></i> Filtres</a></li>
         </ul>
       </div>
 
@@ -101,6 +102,9 @@
             <div class="dropdown-divider"></div>
             <a href="#" class="dropdown-item" id="dropdown-favs-btn" data-nav="favorites">
               <i class="fa-regular fa-bookmark"></i> Ma Liste
+            </a>
+            <a href="filters.html" class="dropdown-item" id="dropdown-filters-btn" data-nav="filters">
+              <i class="fa-solid fa-sliders" style="color: #E50914;"></i> Filtres Avancés
             </a>
             <a href="#" class="dropdown-item" id="dropdown-login-trigger">
               <i class="fa-solid fa-user"></i> <span id="dropdown-action-label">Se connecter / S'inscrire</span>
@@ -193,116 +197,7 @@
       </div>
     </section>
 
-    <!-- SECTION FILTRES AVANCÉS & CATALOGUE (STYLE HANDYFLIX) -->
-    <section class="section advanced-filters-section" id="advanced-filters-section">
-      <div class="filter-panel-card">
-        <div class="filter-panel-header">
-          <div class="filter-panel-title">
-            <i class="fa-solid fa-sliders" style="color: #ff3344;"></i>
-            <span>Filtres Avancés du Catalogue</span>
-          </div>
-          <button class="btn-reset-filters" id="btn-reset-filters" title="Réinitialiser les filtres">
-            <i class="fa-solid fa-rotate-left"></i> Réinitialiser
-          </button>
-        </div>
 
-        <div class="filter-controls-grid">
-          <!-- Format -->
-          <div class="filter-control-group">
-            <label><i class="fa-solid fa-film"></i> Format</label>
-            <select id="filter-type-select" class="filter-select">
-              <option value="all">Tous (Films & Séries)</option>
-              <option value="movie">Films uniquement</option>
-              <option value="tv">Séries TV & Animes</option>
-            </select>
-          </div>
-
-          <!-- Genre -->
-          <div class="filter-control-group">
-            <label><i class="fa-solid fa-tag"></i> Genre</label>
-            <select id="filter-genre-select" class="filter-select">
-              <option value="Tous">Tous les genres</option>
-              <option value="Action">Action</option>
-              <option value="Aventure">Aventure</option>
-              <option value="Animation">Animation</option>
-              <option value="Comédie">Comédie</option>
-              <option value="Crime">Crime / Policier</option>
-              <option value="Drame">Drame</option>
-              <option value="Fantastique">Fantastique</option>
-              <option value="Horreur">Horreur</option>
-              <option value="Romance">Romance</option>
-              <option value="Sci-Fi">Science-Fiction</option>
-              <option value="Thriller">Thriller</option>
-              <option value="Mystère">Mystère</option>
-            </select>
-          </div>
-
-          <!-- Année -->
-          <div class="filter-control-group">
-            <label><i class="fa-regular fa-calendar"></i> Année de sortie</label>
-            <select id="filter-year-select" class="filter-select">
-              <option value="all">Toutes les années</option>
-              <option value="2025">2025 (Très récent)</option>
-              <option value="2024">2024</option>
-              <option value="2023">2023</option>
-              <option value="2022">2022</option>
-              <option value="2021">2021</option>
-              <option value="2020">2020</option>
-              <option value="2019">2019</option>
-              <option value="2018">2018</option>
-              <option value="2015">2015 - 2017</option>
-              <option value="2010">Années 2010</option>
-              <option value="2000">Classiques 2000s</option>
-            </select>
-          </div>
-
-          <!-- Langue / Version -->
-          <div class="filter-control-group">
-            <label><i class="fa-solid fa-globe"></i> Version / Langue</label>
-            <select id="filter-lang-select" class="filter-select">
-              <option value="all">Toutes les versions</option>
-              <option value="fr">Version Française (VF)</option>
-              <option value="en">Version Originale (VO / VOSTFR)</option>
-              <option value="ht">Créole / Kreyòl (Spécial)</option>
-            </select>
-          </div>
-
-          <!-- Tri -->
-          <div class="filter-control-group">
-            <label><i class="fa-solid fa-arrow-down-wide-short"></i> Trier par</label>
-            <select id="filter-sort-select" class="filter-select">
-              <option value="popularity.desc">Plus Populaires</option>
-              <option value="vote_average.desc">Mieux Notés (Top IMDb)</option>
-              <option value="primary_release_date.desc">Plus Récents</option>
-              <option value="title.asc">Titre (A-Z)</option>
-            </select>
-          </div>
-        </div>
-      </div>
-
-      <!-- GRILLE DES RESULTATS FILTRÉS AVEC PAGINATION INFINIE -->
-      <div id="filtered-results-wrapper" class="filtered-results-wrapper" style="display: none; margin-top: 1.5rem;">
-        <div class="section-header-handy">
-          <div>
-            <div class="section-subtitle-tag"><span class="gold-dash">—</span> RÉSULTATS DU CATALOGUE</div>
-            <h2 class="section-title-handy" id="filtered-catalog-title">Films & Séries Correspondants</h2>
-          </div>
-          <span id="filtered-catalog-badge" class="badge" style="background: rgba(229,9,20,0.2); color: #ff3344; font-weight: 700; padding: 0.3rem 0.8rem; border-radius: 6px;">Page 1</span>
-        </div>
-
-        <div class="handy-media-grid" id="filtered-catalog-grid">
-          <!-- Cartes chargées dynamiquement -->
-        </div>
-
-        <!-- BOUTON CHARGEMENT INFINI / PAGINATION -->
-        <div style="display: flex; justify-content: center; margin-top: 2.2rem; margin-bottom: 1.5rem;">
-          <button class="btn-load-more" id="btn-load-more-catalog">
-            <i class="fa-solid fa-circle-notch fa-spin hidden" id="load-more-spinner"></i>
-            <span id="load-more-text"><i class="fa-solid fa-arrow-down" style="margin-right: 6px;"></i> Charger plus de films & séries</span>
-          </button>
-        </div>
-      </div>
-    </section>
 
     <!-- BARRE ET GRILLE DES GENRES -->
     <section class="genres-bar-container">
@@ -401,123 +296,264 @@
     </section>
   </main>
 
-  <!-- STREAM PLAYER MODAL SUR MESURE (SPACE THEME) -->
-  <div class="modal-backdrop" id="player-modal">
-    <div class="player-modal-content">
-      <button class="modal-close-btn" id="close-player-btn" aria-label="Fermer le lecteur">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
-
-      <!-- BANDEAU DE REPRISE DE LECTURE AUTOMATIQUE -->
-      <div class="player-resume-prompt hidden" id="player-resume-banner">
-        <div class="resume-prompt-info">
-          <i class="fa-solid fa-clock-rotate-left resume-icon-pulse"></i>
-          <span>Reprendre la lecture là où vous vous étiez arrêté (<strong id="resume-time-text">00:00</strong>) ?</span>
+  <!-- STREAM PLAYER & DETAILS MODAL (FREEHANDYFLIX NOIR & ROUGE STYLE) -->
+  <div class="modal-backdrop hidden" id="player-modal">
+    <div class="player-modal-content handy-style-modal">
+      
+      <!-- TOP NAVIGATION BAR -->
+      <div class="handy-modal-topbar">
+        <button class="btn-back-handy" id="close-player-btn" aria-label="Retour">
+          <i class="fa-solid fa-chevron-left"></i> <span>Dos</span>
+        </button>
+        <div class="handy-now-playing-title" id="modal-now-playing">
+          <span class="np-label">NOW PLAYING</span>
+          <span class="np-title" id="modal-now-playing-title">Titre du film</span>
         </div>
-        <div class="resume-prompt-btns">
-          <button class="btn-resume-action btn-resume-yes" id="btn-resume-accept">
-            <i class="fa-solid fa-play"></i> Reprendre
-          </button>
-          <button class="btn-resume-action btn-resume-no" id="btn-resume-decline">
-            <i class="fa-solid fa-rotate-left"></i> Du début
-          </button>
-        </div>
+        <div class="handy-quality-tag-top" id="modal-top-quality-badge">1080P</div>
       </div>
 
-      <!-- LECTEUR VIDÉO PRINCIPAL -->
-      <div class="video-container" id="video-container-wrap">
-        <iframe 
-          id="video-iframe" 
-          class="video-iframe" 
-          allowfullscreen 
-          webkitallowfullscreen="true" 
-          mozallowfullscreen="true" 
-          allow="autoplay; encrypted-media; picture-in-picture; fullscreen" 
-          frameborder="0" 
-          scrolling="no">
-        </iframe>
-      </div>
-
-      <!-- BARRE D'OUTILS & RACCOURCIS DU LECTEUR -->
-      <div class="player-custom-toolbar">
-        <div class="toolbar-left">
-          <button class="custom-tool-btn" id="btn-reload-stream" title="Recharger le flux vidéo">
-            <i class="fa-solid fa-rotate"></i> <span>Actualiser</span>
-          </button>
-          <a class="custom-tool-btn" id="btn-open-external-stream" href="#" target="_blank" rel="noopener noreferrer" title="Ouvrir le lecteur dans un nouvel onglet" style="text-decoration: none;">
-            <i class="fa-solid fa-arrow-up-right-from-square"></i> <span>Nouvel onglet</span>
-          </a>
-          <div class="speed-selector-wrap">
-            <span class="speed-label"><i class="fa-solid fa-gauge-high"></i> Vitesse:</span>
-            <select id="player-speed-select" class="speed-select" title="Vitesse de lecture">
-              <option value="0.75">0.75x</option>
-              <option value="1" selected>1.0x (Normale)</option>
-              <option value="1.25">1.25x</option>
-              <option value="1.5">1.5x</option>
-              <option value="2">2.0x</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="toolbar-right">
-          <button class="custom-tool-btn" id="btn-theater-mode" title="Agrandir / Mode Cinéma">
-            <i class="fa-solid fa-expand"></i> <span>Mode Large</span>
-          </button>
-          <button class="custom-tool-btn" id="btn-shortcuts-info" title="Voir les raccourcis clavier">
-            <i class="fa-regular fa-keyboard"></i> <span>Raccourcis</span>
-          </button>
-        </div>
-      </div>
-
-      <div class="player-details-body">
-        <!-- SELECTEUR MULTI-SERVEURS -->
-        <div class="server-selector">
-          <span style="font-size: 0.85rem; font-weight: 700; color: #ff3344; margin-right: 0.5rem; display: flex; align-items: center; gap: 6px;">
-            <i class="fa-solid fa-server"></i> Serveurs de Streaming :
-          </span>
-          <div id="server-buttons-container" style="display: flex; gap: 0.6rem; flex-wrap: wrap;">
-            <!-- Boutons de serveurs vidéo -->
-          </div>
-        </div>
-
-        <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap;">
-          <div>
-            <h2 id="modal-title" style="font-family: var(--font-heading); font-size: 1.8rem; font-weight: 800; margin-bottom: 0.4rem;">Titre</h2>
-            <div style="display: flex; gap: 0.8rem; font-size: 0.85rem; color: var(--text-muted); align-items: center; flex-wrap: wrap;">
-              <span id="modal-year">2024</span>
-              <span>•</span>
-              <span id="modal-rating" style="color: #fbbf24; font-weight: 700;"><i class="fa-solid fa-star"></i> 8.6</span>
-              <span>•</span>
-              <span id="modal-duration">2h 15m</span>
-              <span id="modal-genres-tags" style="display: flex; gap: 0.4rem; margin-left: 0.5rem;"></span>
+      <!-- HERO DETAILS SECTION -->
+      <div class="handy-details-hero-section" id="handy-details-hero">
+        <div class="handy-backdrop-blur" id="modal-backdrop-blur"></div>
+        <div class="handy-details-container">
+          
+          <!-- LEFT POSTER CARD -->
+          <div class="handy-poster-column">
+            <div class="handy-poster-card">
+              <img id="modal-poster-img" src="" alt="Poster" class="handy-poster-image">
+              <div class="handy-poster-tag" id="modal-media-type-tag">FILM</div>
             </div>
           </div>
 
-          <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
-            <button class="btn-secondary" id="modal-download-btn" title="Télécharger le film ou l'épisode">
-              <i class="fa-solid fa-download"></i> <span id="modal-download-text">Télécharger</span>
-            </button>
-            <button class="btn-secondary" id="modal-fav-btn">
-              <i class="fa-regular fa-bookmark"></i> <span id="modal-fav-text">Ajouter à ma liste</span>
-            </button>
-          </div>
-        </div>
+          <!-- RIGHT DETAILS COLUMN -->
+          <div class="handy-info-column">
+            <div class="handy-sub-badge">DISPONIBLE EN STREAMING DÈS MAINTENANT</div>
+            <h1 class="handy-title-text" id="modal-title">Chargement...</h1>
 
-        <p id="modal-synopsis" style="color: var(--text-muted); font-size: 0.95rem; line-height: 1.6; margin-bottom: 1.5rem;">Synopsis...</p>
+            <!-- BADGES ROW -->
+            <div class="handy-badges-row">
+              <span class="handy-badge star-badge"><i class="fa-solid fa-star" style="color: #E50914;"></i> <span id="modal-rating">5.5</span></span>
+              <span class="handy-badge"><i class="fa-regular fa-calendar"></i> <span id="modal-year">2026</span></span>
+              <span class="handy-badge"><i class="fa-regular fa-clock"></i> <span id="modal-duration">1h 52m</span></span>
+              <span class="handy-badge quality-pill">1080p</span>
+            </div>
 
-        <!-- SÉLECTEUR DE SAISONS ET ÉPISODES (SI SÉRIE) -->
-        <div id="series-episodes-wrapper" style="display: none; border-top: 1px solid var(--border-glass); padding-top: 1.2rem; margin-top: 1rem;">
-          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
-            <h3 style="font-size: 1.2rem; font-weight: 700;">Épisodes Disponibles</h3>
-            <select id="season-select" style="background: rgba(255,255,255,0.08); color: #fff; border: 1px solid var(--border-glass); padding: 0.4rem 1rem; border-radius: 8px; font-weight: 600; outline: none;">
-              <!-- Options de saisons -->
-            </select>
-          </div>
-          <div class="episode-grid" id="episodes-container">
-            <!-- Grille des épisodes -->
+            <!-- GENRES ROW -->
+            <div class="handy-genres-container" id="modal-genres-tags">
+              <!-- Dynamique par JS -->
+            </div>
+
+            <!-- MAIN PLAY BUTTON (JOUER MAINTENANT) -->
+            <div class="handy-main-play-wrap">
+              <button class="handy-btn-play-main" id="btn-main-play-trigger">
+                <div class="play-icon-circle"><i class="fa-solid fa-play"></i></div>
+                <div class="play-labels">
+                  <span class="play-title">Jouez maintenant</span>
+                  <span class="play-subtitle">1080P - FLUX HD</span>
+                </div>
+                <div class="play-arrow-circle"><i class="fa-solid fa-arrow-up-right-from-square"></i></div>
+              </button>
+            </div>
+
+            <!-- 3 QUICK ACTION CARDS -->
+            <div class="handy-action-cards-grid">
+              <button class="handy-action-card" id="modal-download-btn" title="Télécharger le contenu">
+                <div class="card-icon"><i class="fa-solid fa-download"></i></div>
+                <span class="card-label">Sauvegarder</span>
+              </button>
+              
+              <button class="handy-action-card" id="modal-fav-btn" title="Ajouter à ma liste">
+                <div class="card-icon"><i class="fa-solid fa-plus" id="modal-fav-icon"></i></div>
+                <span class="card-label" id="modal-fav-text">Liste</span>
+              </button>
+
+              <button class="handy-action-card" id="modal-share-btn" title="Partager ce film">
+                <div class="card-icon"><i class="fa-solid fa-share-nodes"></i></div>
+                <span class="card-label">Partager</span>
+              </button>
+            </div>
+
+            <!-- DOUBLAGE FRANÇAIS & LANGUES BLOCK -->
+            <div class="handy-lang-block">
+              <div class="lang-header-row">
+                <div class="lang-title-group">
+                  <div class="lang-icon-wrap"><i class="fa-solid fa-language"></i></div>
+                  <div>
+                    <span class="lang-mini-label">LANGUE</span>
+                    <h3 class="lang-main-label" id="lang-active-display">Doublage français</h3>
+                  </div>
+                </div>
+                <span class="lang-default-badge">DÉFAUT</span>
+              </div>
+
+              <!-- TABS AUDIO / SOUS-PISTES -->
+              <div class="lang-tabs-bar">
+                <button class="lang-tab-btn active" id="tab-audio-btn">
+                  <i class="fa-solid fa-language"></i> Audio <span class="tab-count-badge" id="audio-count-badge">11</span>
+                </button>
+                <button class="lang-tab-btn" id="tab-sub-btn">
+                  <i class="fa-regular fa-closed-captioning"></i> Sous-pistes <span class="tab-count-badge">1</span>
+                </button>
+              </div>
+
+              <!-- AUDIO DUBBING GRID CARDS -->
+              <div class="lang-options-grid" id="lang-options-container">
+                <div class="lang-card" data-lang="gb">
+                  <span class="lang-code">GB</span>
+                  <div class="lang-info">
+                    <span class="lang-name">Audio original</span>
+                    <span class="lang-sub">ORIGINAL</span>
+                  </div>
+                </div>
+
+                <div class="lang-card" data-lang="sa">
+                  <span class="lang-code">SA</span>
+                  <div class="lang-info">
+                    <span class="lang-name">Doublage arabe</span>
+                    <span class="lang-sub">DOUBLÉ</span>
+                  </div>
+                </div>
+
+                <div class="lang-card active" data-lang="fr">
+                  <span class="lang-code">FR</span>
+                  <div class="lang-info">
+                    <span class="lang-name">Doublage français</span>
+                    <span class="lang-sub">DOUBLÉ</span>
+                  </div>
+                  <i class="fa-solid fa-check lang-check-icon" style="color: #E50914;"></i>
+                </div>
+
+                <div class="lang-card" data-lang="in">
+                  <span class="lang-code">IN</span>
+                  <div class="lang-info">
+                    <span class="lang-name">Doublage hindi</span>
+                    <span class="lang-sub">DOUBLÉ</span>
+                  </div>
+                </div>
+
+                <div class="lang-card" data-lang="id">
+                  <span class="lang-code">ID</span>
+                  <div class="lang-info">
+                    <span class="lang-name">Doublage indonésien</span>
+                    <span class="lang-sub">DOUBLÉ</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- SUBTITLES INFO BOTTOM BAR -->
+              <div class="lang-subtitles-bar">
+                <i class="fa-regular fa-closed-captioning"></i>
+                <span>1 piste de sous-titres disponible</span>
+                <i class="fa-solid fa-chevron-down caret-icon"></i>
+              </div>
+            </div>
+
+            <!-- SYNOPSIS PARAGRAPH -->
+            <div class="handy-synopsis-box">
+              <h4 class="synopsis-heading">Synopsis & Détails</h4>
+              <p id="modal-synopsis">Chargement du résumé...</p>
+            </div>
+
+            <!-- MULTI-SERVERS & EPISODES -->
+            <div class="server-selector-handy">
+              <div class="server-title"><i class="fa-solid fa-server"></i> Serveurs de Streaming :</div>
+              <div id="server-buttons-container" class="server-buttons-grid"></div>
+            </div>
+
+            <div id="series-episodes-wrapper" class="series-episodes-block" style="display: none;">
+              <div class="series-header-row">
+                <h3>Épisodes Disponibles</h3>
+                <select id="season-select" class="season-select-handy"></select>
+              </div>
+              <div class="episode-grid" id="episodes-container"></div>
+            </div>
+
           </div>
         </div>
       </div>
+
+      <!-- LECTEUR VIDÉO PRINCIPAL AVEC BARRE DE CONTRÔLE MESURÉE (PHOTO 1 EXCLUSIF) -->
+      <div class="player-wrapper-handy hidden" id="player-wrapper-handy">
+        <div class="video-container" id="video-container-wrap">
+          <iframe 
+            id="video-iframe" 
+            class="video-iframe" 
+            allowfullscreen 
+            webkitallowfullscreen="true" 
+            mozallowfullscreen="true" 
+            allow="fullscreen; autoplay; encrypted-media; picture-in-picture" 
+            frameborder="0" 
+            scrolling="no">
+          </iframe>
+
+          <!-- LOADER SPINNER D'ATTENTE (PHOTO 1) -->
+          <div id="player-loading-overlay" class="player-loading-overlay hidden">
+            <div class="loader-spinner"></div>
+            <div class="loader-text">Preparing stream...</div>
+          </div>
+
+          <!-- OVERLAY ERREUR DE FLUX -->
+          <div id="player-error-overlay" class="player-error-overlay hidden">
+            <i class="fa-solid fa-triangle-exclamation error-icon"></i>
+            <h3 class="error-title">Erreur de chargement du flux vidéo</h3>
+            <p class="error-desc">Ce serveur rencontre un problème temporaire. Essayez un serveur alternatif ci-dessous.</p>
+            <div class="error-actions">
+              <button id="btn-error-switch-server" class="btn-error-action"><i class="fa-solid fa-rotate"></i> Prochain serveur</button>
+              <button id="btn-error-watch-trailer" class="btn-error-action btn-secondary"><i class="fa-solid fa-film"></i> Bande-annonce</button>
+            </div>
+          </div>
+
+          <!-- BANDE DE CONTRÔLES SUR MESURE (PHOTO 1 EXACT MATCH IN BLACK & RED) -->
+          <div class="handy-player-controls-bar" id="handy-player-controls-bar">
+            <!-- GAUCHE -->
+            <div class="ctrl-left">
+              <button id="btn-toggle-play" class="btn-ctrl-play" title="Lecture / Pause">
+                <i class="fa-solid fa-play" id="play-pause-icon"></i>
+              </button>
+
+              <button id="btn-rewind-10" class="btn-ctrl-icon" title="Reculer 10s">
+                <i class="fa-solid fa-step-backward"></i>
+              </button>
+
+              <button id="btn-forward-10" class="btn-ctrl-icon" title="Avancer 10s">
+                <i class="fa-solid fa-step-forward"></i>
+              </button>
+
+              <div class="ctrl-volume-group">
+                <button id="btn-volume-mute" class="btn-ctrl-icon" title="Couper le son">
+                  <i class="fa-solid fa-volume-high" id="volume-icon"></i>
+                </button>
+                <input type="range" id="player-volume-slider" class="volume-slider" min="0" max="1" step="0.05" value="1" title="Volume">
+              </div>
+
+              <div class="ctrl-timestamp" id="player-time-display">
+                <span id="cur-time">0:00</span> / <span id="dur-time">1:42:00</span>
+              </div>
+            </div>
+
+            <!-- DROITE -->
+            <div class="ctrl-right">
+              <button id="btn-subtitles-toggle" class="btn-ctrl-icon" title="Sous-titres">
+                <i class="fa-regular fa-closed-captioning"></i>
+              </button>
+
+              <div class="quality-select-wrapper">
+                <select id="player-quality-select" class="quality-select" title="Qualité vidéo">
+                  <option value="480p">480P</option>
+                  <option value="720p">720P</option>
+                  <option value="1080p" selected>1080P</option>
+                </select>
+              </div>
+
+              <button id="btn-fullscreen-toggle" class="btn-ctrl-icon" title="Plein écran">
+                <i class="fa-solid fa-expand"></i>
+              </button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
     </div>
   </div>
 
