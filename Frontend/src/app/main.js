@@ -33,6 +33,7 @@ const state = {
   playerMode: 'stream', // 'stream' | 'trailer'
   mediaVideos: [],
   playbackTimer: null,
+  playerLoadTimer: null,
   playbackSeconds: 0,
   playbackDuration: 7200, // 2h par défaut
   isPlaying: true,
@@ -961,7 +962,7 @@ export function showToast(message) {
 }
 
 function startPlaybackNow() {
-  const handyHero = document.getElementById('handy-details-hero-section');
+  const handyHero = document.getElementById('handy-details-hero');
   const handyPlayerWrap = document.getElementById('player-wrapper-handy');
   const similarSection = document.getElementById('similar-media-section');
   const loader = document.getElementById('player-loading-overlay');
@@ -980,8 +981,16 @@ function startPlaybackNow() {
   if (state.playerMode === 'trailer') {
     loadTrailerVideo();
   } else {
-    const servers = state.activeMedia?.video_servers || generateDefaultServers(state.activeMedia, state.activeSeason, state.activeEpisodeNumber);
-    loadVideoIframe(servers[state.activeServerIndex]?.url || servers[0]?.url);
+    const servers = getConfiguredServers(state.activeMedia, state.activeSeason, state.activeEpisodeNumber);
+    const streamUrl = servers[state.activeServerIndex]?.url || servers[0]?.url;
+    if (streamUrl) {
+      loadVideoIframe(streamUrl);
+    } else {
+      state.playerMode = 'trailer';
+      updateSourceTabsUI();
+      showToast('Aucun flux autorisé configuré : ouverture de la bande-annonce officielle.');
+      loadTrailerVideo();
+    }
   }
 
   startPlaybackTracker();
@@ -1051,7 +1060,7 @@ export async function openPlayerModal(media, seasonNumber = 1, episodeNumber = 1
   if (DOM.modalSynopsis) DOM.modalSynopsis.textContent = media.synopsis || 'Aucun synopsis disponible.';
 
   // Affichage initial : Hero visible, Player caché
-  const handyHero = document.getElementById('handy-details-hero-section');
+  const handyHero = document.getElementById('handy-details-hero');
   const handyPlayerWrap = document.getElementById('player-wrapper-handy');
   if (handyHero) handyHero.style.display = 'block';
   if (DOM.similarMediaSection) DOM.similarMediaSection.classList.remove('hidden');
@@ -1082,7 +1091,7 @@ export async function openPlayerModal(media, seasonNumber = 1, episodeNumber = 1
     if (state.playerMode === 'trailer') {
       startPlaybackNow();
     } else {
-      setupVideoServers(media.video_servers || generateDefaultServers(media));
+      setupVideoServers(getConfiguredServers(media, state.activeSeason, state.activeEpisodeNumber));
     }
   }
 
@@ -1160,42 +1169,43 @@ function renderSimilarMedia(activeMedia) {
   });
 }
 
-function generateDefaultServers(media, season = 1, episode = 1) {
-  const tmdbId = media.tmdb_id || media.id.replace(/^[a-z]+-/, '');
+function getConfiguredServers(media, season = 1, episode = 1) {
+  if (!media) return [];
+
   if (media.type === 'movie') {
-    return [
-      { name: "Serveur 1 (VidLink HD)", url: `https://vidlink.pro/movie/${tmdbId}`, quality: "1080p", lang: "VF/VOSTFR" },
-      { name: "Serveur 2 (VidSrc CC)", url: `https://vidsrc.cc/v2/embed/movie/${tmdbId}`, quality: "1080p", lang: "VF" },
-      { name: "Serveur 3 (VidSrc To)", url: `https://vidsrc.to/embed/movie/${tmdbId}`, quality: "1080p", lang: "VF" },
-      { name: "Serveur 4 (SuperEmbed)", url: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1`, quality: "1080p", lang: "VF/VOSTFR" },
-      { name: "Serveur 5 (VidSrc Me)", url: `https://vidsrc.me/embed/movie?tmdb=${tmdbId}`, quality: "1080p", lang: "VF" },
-      { name: "Serveur 6 (AutoEmbed)", url: `https://player.autoembed.cc/embed/movie/${tmdbId}`, quality: "1080p", lang: "VF" },
-      { name: "Serveur 7 (Videasy HD)", url: `https://player.videasy.net/movie/${tmdbId}`, quality: "1080p", lang: "VOSTFR" },
-      { name: "Serveur 8 (SmashyStream)", url: `https://embed.smashystream.com/playere.php?tmdb=${tmdbId}`, quality: "1080p", lang: "Multi" }
-    ];
+    return Array.isArray(media.video_servers) ? media.video_servers.filter(server => server?.url) : [];
   }
-  return [
-    { name: "Serveur 1 (VidLink HD)", url: `https://vidlink.pro/tv/${tmdbId}/${season}/${episode}`, quality: "1080p", lang: "VF/VOSTFR" },
-    { name: "Serveur 2 (VidSrc CC)", url: `https://vidsrc.cc/v2/embed/tv/${tmdbId}/${season}/${episode}`, quality: "1080p", lang: "VF" },
-    { name: "Serveur 3 (VidSrc To)", url: `https://vidsrc.to/embed/tv/${tmdbId}/${season}/${episode}`, quality: "1080p", lang: "VF" },
-    { name: "Serveur 4 (SuperEmbed)", url: `https://multiembed.mov/?video_id=${tmdbId}&tmdb=1&s=${season}&e=${episode}`, quality: "1080p", lang: "VF/VOSTFR" },
-    { name: "Serveur 5 (VidSrc Me)", url: `https://vidsrc.me/embed/tv?tmdb=${tmdbId}&season=${season}&episode=${episode}`, quality: "1080p", lang: "VF" },
-    { name: "Serveur 6 (AutoEmbed)", url: `https://player.autoembed.cc/embed/tv/${tmdbId}/${season}/${episode}`, quality: "1080p", lang: "VF" },
-    { name: "Serveur 7 (Videasy HD)", url: `https://player.videasy.net/tv/${tmdbId}/${season}/${episode}`, quality: "1080p", lang: "VOSTFR" },
-    { name: "Serveur 8 (SmashyStream)", url: `https://embed.smashystream.com/playere.php?tmdb=${tmdbId}&season=${season}&episode=${episode}`, quality: "1080p", lang: "Multi" }
-  ];
+
+  const nestedEpisode = media.seasons
+    ?.find(item => Number(item.season_number) === Number(season))
+    ?.episodes
+    ?.find(item => Number(item.episode_number) === Number(episode));
+  const flatEpisode = media.episodes
+    ?.find(item => Number(item.season_number) === Number(season) && Number(item.episode_number) === Number(episode));
+  const episodeData = nestedEpisode || flatEpisode;
+
+  return Array.isArray(episodeData?.video_servers)
+    ? episodeData.video_servers.filter(server => server?.url)
+    : [];
+}
+
+function generateDefaultServers(media, season = 1, episode = 1) {
+  // TMDB provides catalogue metadata and trailers, not licensed full-video files.
+  // Full playback must therefore come from an explicitly configured, authorized
+  // source in Supabase/media data. Do not invent third-party stream URLs here.
+  return [];
 }
 
 function setupVideoServers(servers) {
-  if (!servers || servers.length === 0) {
-    servers = generateDefaultServers(state.activeMedia, state.activeSeason, state.activeEpisodeNumber);
-  }
+  servers = Array.isArray(servers) ? servers.filter(server => server?.url) : [];
 
-  DOM.serverButtonsContainer.innerHTML = servers.map((srv, idx) => `
+  DOM.serverButtonsContainer.innerHTML = servers.length
+    ? servers.map((srv, idx) => `
     <button class="server-btn ${idx === state.activeServerIndex ? 'active' : ''}" data-idx="${idx}">
       <i class="fa-solid fa-play" style="font-size: 0.75rem; margin-right: 4px;"></i> ${srv.name} (${srv.lang || 'VF'})
     </button>
-  `).join('');
+  `).join('')
+    : '<p class="server-empty">Aucun flux autorisé n’est configuré pour ce titre. Utilisez la bande-annonce officielle.</p>';
 
   DOM.serverButtonsContainer.querySelectorAll('.server-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
@@ -1208,7 +1218,7 @@ function setupVideoServers(servers) {
     });
   });
 
-  if (state.playerMode === 'stream') {
+  if (state.playerMode === 'stream' && servers.length > 0) {
     loadVideoIframe(servers[state.activeServerIndex]?.url || servers[0].url);
   }
 }
@@ -1226,12 +1236,32 @@ function loadTrailerVideo() {
 
 function loadVideoIframe(url) {
   if (DOM.playerErrorOverlay) DOM.playerErrorOverlay.classList.add('hidden');
-  if (DOM.videoIframe && url) {
-    DOM.videoIframe.removeAttribute('sandbox');
-    DOM.videoIframe.setAttribute('allowfullscreen', 'true');
-    DOM.videoIframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
-    DOM.videoIframe.src = url;
-  }
+  if (!DOM.videoIframe || !url) return;
+
+  const loader = document.getElementById('player-loading-overlay');
+  if (loader) loader.classList.remove('hidden');
+  if (state.playerLoadTimer) clearTimeout(state.playerLoadTimer);
+  let loaded = false;
+
+  DOM.videoIframe.onload = () => {
+    loaded = true;
+    if (loader) loader.classList.add('hidden');
+  };
+  DOM.videoIframe.onerror = () => {
+    if (loader) loader.classList.add('hidden');
+    DOM.playerErrorOverlay?.classList.remove('hidden');
+  };
+  DOM.videoIframe.removeAttribute('sandbox');
+  DOM.videoIframe.setAttribute('allowfullscreen', 'true');
+  DOM.videoIframe.setAttribute('allow', 'autoplay; encrypted-media; picture-in-picture; fullscreen');
+  DOM.videoIframe.src = url;
+
+  // Cross-origin iframes do not expose the embedded player's errors. This
+  // timeout prevents a blank player when a provider blocks embedding.
+  state.playerLoadTimer = setTimeout(() => {
+    if (loader) loader.classList.add('hidden');
+    if (!loaded) DOM.playerErrorOverlay?.classList.remove('hidden');
+  }, 12000);
   const extBtn = document.getElementById('btn-open-external-stream');
   if (extBtn && url) {
     extBtn.href = url;
@@ -1243,7 +1273,12 @@ async function setupSeriesSelector(media) {
 
   // Charger les saisons depuis TMDB si possible
   let seasons = (media.seasons && media.seasons.length > 0) ? media.seasons : [];
-  if (seasons.length <= 1) {
+  const hasConfiguredEpisodes = seasons.some(season =>
+    Array.isArray(season.episodes) && season.episodes.some(episode => episode?.video_servers?.length)
+  );
+
+  // Ne pas remplacer les épisodes configurés par de simples métadonnées TMDB.
+  if (seasons.length <= 1 && !hasConfiguredEpisodes) {
     try {
       const tvDetails = await TMDBService.getTVShowDetails(tmdbId);
       if (tvDetails && tvDetails.seasons && tvDetails.seasons.length > 0) {
@@ -1326,7 +1361,7 @@ async function renderEpisodes(media) {
       const selectedEp = episodes.find(e => e.episode_number === epNum);
       state.activeEpisodeTitle = selectedEp?.title || `Épisode ${epNum}`;
 
-      const servers = generateDefaultServers(media, state.activeSeason, epNum);
+      const servers = getConfiguredServers(media, state.activeSeason, epNum);
 
       state.activeServerIndex = 0;
       setupVideoServers(servers);
@@ -1337,7 +1372,7 @@ async function renderEpisodes(media) {
   const activeEp = episodes.find(e => e.episode_number === state.activeEpisodeNumber) || episodes[0];
   if (activeEp) {
     state.activeEpisodeTitle = activeEp.title || `Épisode ${state.activeEpisodeNumber}`;
-    const servers = generateDefaultServers(media, state.activeSeason, state.activeEpisodeNumber);
+    const servers = getConfiguredServers(media, state.activeSeason, state.activeEpisodeNumber);
     setupVideoServers(servers);
   }
 }
@@ -1397,6 +1432,10 @@ async function saveCurrentPlayback() {
 export function closePlayerModal() {
   saveCurrentPlayback();
   stopPlaybackTracker();
+  if (state.playerLoadTimer) {
+    clearTimeout(state.playerLoadTimer);
+    state.playerLoadTimer = null;
+  }
   DOM.playerModal.classList.remove('active');
   if (DOM.videoIframe) DOM.videoIframe.src = '';
   document.body.style.overflow = 'auto';
@@ -1497,9 +1536,7 @@ export function openDownloadModal() {
   }
 
   // Vérification de source directe téléchargeable
-  const currentServers = (media.video_servers && media.video_servers.length > 0)
-    ? media.video_servers
-    : generateDefaultServers(media, season, episode);
+  const currentServers = getConfiguredServers(media, season, episode);
 
   const activeServer = currentServers[state.activeServerIndex] || currentServers[0] || { url: DOM.videoIframe?.src || '' };
   const currentStreamUrl = DOM.videoIframe?.src || activeServer.url || '';
@@ -1779,7 +1816,7 @@ function setupEventListeners() {
     state.playerMode = 'stream';
     updateSourceTabsUI();
     if (state.activeMedia) {
-      setupVideoServers(state.activeMedia.video_servers || generateDefaultServers(state.activeMedia, state.activeSeason, state.activeEpisodeNumber));
+      setupVideoServers(getConfiguredServers(state.activeMedia, state.activeSeason, state.activeEpisodeNumber));
     }
   });
 
@@ -1820,7 +1857,7 @@ function setupEventListeners() {
   const btnBackHandy = DOM.closePlayerBtn;
   btnBackHandy?.addEventListener('click', () => {
     const handyPlayerWrap = document.getElementById('player-wrapper-handy');
-    const handyHero = document.getElementById('handy-details-hero-section');
+    const handyHero = document.getElementById('handy-details-hero');
     const similarSection = document.getElementById('similar-media-section');
 
     if (handyPlayerWrap && !handyPlayerWrap.classList.contains('hidden')) {
@@ -1911,11 +1948,17 @@ function setupEventListeners() {
 
   // Erreur de flux & fallback
   DOM.btnErrorSwitchServer?.addEventListener('click', () => {
-    const servers = generateDefaultServers(state.activeMedia, state.activeSeason, state.activeEpisodeNumber);
-    state.activeServerIndex = (state.activeServerIndex + 1) % servers.length;
-    state.playerMode = 'stream';
-    updateSourceTabsUI();
-    setupVideoServers(servers);
+    const servers = getConfiguredServers(state.activeMedia, state.activeSeason, state.activeEpisodeNumber);
+    if (servers.length > 0) {
+      state.activeServerIndex = (state.activeServerIndex + 1) % servers.length;
+      state.playerMode = 'stream';
+      updateSourceTabsUI();
+      setupVideoServers(servers);
+    } else {
+      state.playerMode = 'trailer';
+      updateSourceTabsUI();
+      loadTrailerVideo();
+    }
   });
 
   DOM.btnErrorWatchTrailer?.addEventListener('click', () => {

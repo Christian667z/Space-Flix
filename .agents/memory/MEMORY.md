@@ -1,0 +1,1 @@
+- [Video rights boundary](video-rights-boundary.md) — TMDB metadata and trailers do not grant rights to full-film playback; full streams must be explicitly authorized.
