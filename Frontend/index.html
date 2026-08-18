@@ -20,7 +20,12 @@
       SUPABASE_URL: 'https://gfjyywtxshebhteaxxtf.supabase.co',
       SUPABASE_ANON_KEY: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdmanl5d3R4c2hlYmh0ZWF4eHRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNTc4NjYsImV4cCI6MjEwMjYzMzg2Nn0.G8EwY9CNUA6fW3d8XqKSjM5qhE8-67qgcUsp0BVPHP0',
       TMDB_API_KEY: '99b995150ed16f5fc8a3fff320ca41df',
-      TMDB_BASE_URL: 'https://api.themoviedb.org/3'
+      TMDB_BASE_URL: 'https://api.themoviedb.org/3',
+      // Fournisseurs de lecture complets autorisés par le propriétaire du projet.
+      // Modèles acceptés : {tmdb_id}, {season}, {episode}
+      // Exemple de forme (sans domaine pré-rempli) :
+      // { name: 'Mon fournisseur', movie: 'https://.../movie/{tmdb_id}', tv: 'https://.../tv/{tmdb_id}/{season}/{episode}' }
+      AUTHORIZED_EMBED_PROVIDERS: []
     };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
@@ -454,26 +459,28 @@
               <p id="modal-synopsis">Chargement du résumé...</p>
             </div>
 
-            <!-- MULTI-SERVERS & EPISODES -->
-            <div class="server-selector-handy">
-              <div class="server-title"><i class="fa-solid fa-server"></i> Serveurs de Streaming :</div>
-              <div id="server-buttons-container" class="server-buttons-grid"></div>
-            </div>
-
-            <div id="series-episodes-wrapper" class="series-episodes-block" style="display: none;">
-              <div class="series-header-row">
-                <h3>Épisodes Disponibles</h3>
-                <select id="season-select" class="season-select-handy"></select>
-              </div>
-              <div class="episode-grid" id="episodes-container"></div>
-            </div>
-
           </div>
         </div>
       </div>
 
       <!-- LECTEUR VIDÉO PRINCIPAL AVEC BARRE DE CONTRÔLE MESURÉE (PHOTO 1 EXCLUSIF) -->
       <div class="player-wrapper-handy hidden" id="player-wrapper-handy">
+        <!-- Ces contrôles restent visibles pendant la lecture, même lorsque la fiche est masquée. -->
+        <div class="player-source-toolbar" id="player-source-toolbar">
+          <div class="server-selector-handy">
+            <div class="server-title"><i class="fa-solid fa-server"></i> Sources de lecture configurées :</div>
+            <div id="server-buttons-container" class="server-buttons-grid"></div>
+          </div>
+
+          <div id="series-episodes-wrapper" class="series-episodes-block" style="display: none;">
+            <div class="series-header-row">
+              <h3>Épisodes disponibles</h3>
+              <select id="season-select" class="season-select-handy"></select>
+            </div>
+            <div class="episode-grid" id="episodes-container"></div>
+          </div>
+        </div>
+
         <div class="video-container" id="video-container-wrap">
           <iframe 
             id="video-iframe" 

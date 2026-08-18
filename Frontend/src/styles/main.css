@@ -5364,6 +5364,26 @@ body {
   flex-wrap: wrap;
 }
 
+.server-empty {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.player-source-toolbar {
+  padding: 1rem 1.2rem 0;
+  background: #000000;
+}
+
+.player-source-toolbar .server-selector-handy {
+  margin-bottom: 0.85rem;
+}
+
+.player-source-toolbar .series-episodes-block {
+  margin-bottom: 0.85rem;
+}
+
 .series-episodes-block {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.06);

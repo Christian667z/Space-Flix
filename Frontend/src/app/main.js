@@ -1173,7 +1173,10 @@ function getConfiguredServers(media, season = 1, episode = 1) {
   if (!media) return [];
 
   if (media.type === 'movie') {
-    return Array.isArray(media.video_servers) ? media.video_servers.filter(server => server?.url) : [];
+    const configured = Array.isArray(media.video_servers)
+      ? media.video_servers.filter(server => server?.url)
+      : [];
+    return configured.length > 0 ? configured : generateDefaultServers(media, season, episode);
   }
 
   const nestedEpisode = media.seasons
@@ -1184,16 +1187,38 @@ function getConfiguredServers(media, season = 1, episode = 1) {
     ?.find(item => Number(item.season_number) === Number(season) && Number(item.episode_number) === Number(episode));
   const episodeData = nestedEpisode || flatEpisode;
 
-  return Array.isArray(episodeData?.video_servers)
+  const configured = Array.isArray(episodeData?.video_servers)
     ? episodeData.video_servers.filter(server => server?.url)
     : [];
+  return configured.length > 0 ? configured : generateDefaultServers(media, season, episode);
 }
 
 function generateDefaultServers(media, season = 1, episode = 1) {
-  // TMDB provides catalogue metadata and trailers, not licensed full-video files.
-  // Full playback must therefore come from an explicitly configured, authorized
-  // source in Supabase/media data. Do not invent third-party stream URLs here.
-  return [];
+  const providers = window.SPACE_FLIX_CONFIG?.AUTHORIZED_EMBED_PROVIDERS;
+  if (!media || !Array.isArray(providers)) return [];
+
+  const tmdbId = media.tmdb_id || String(media.id || '').replace(/^[a-z]+-/, '');
+  if (!tmdbId) return [];
+
+  const values = {
+    tmdb_id: encodeURIComponent(String(tmdbId)),
+    season: encodeURIComponent(String(Math.max(1, Number(season) || 1))),
+    episode: encodeURIComponent(String(Math.max(1, Number(episode) || 1)))
+  };
+  const templateKey = media.type === 'movie' ? 'movie' : 'tv';
+
+  return providers.map((provider, index) => {
+    const template = provider?.[templateKey];
+    if (!template || !/^https:\/\//i.test(template)) return null;
+
+    const url = String(template).replace(/\{(tmdb_id|season|episode)\}/g, (_, key) => values[key]);
+    return {
+      name: provider.name || `Serveur ${index + 1}`,
+      url,
+      quality: provider.quality || 'HD',
+      lang: provider.lang || 'Multi'
+    };
+  }).filter(Boolean);
 }
 
 function setupVideoServers(servers) {
