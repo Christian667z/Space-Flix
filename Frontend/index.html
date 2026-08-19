@@ -205,6 +205,48 @@
       </section>
     </div>
 
+    <!-- SECTION PLATEFORMES D'ORIGINE / STUDIOS -->
+    <section class="platforms-bar-section" id="platforms-section">
+      <div class="platforms-scroll-wrapper" id="platforms-container">
+        <a href="filters.html?provider=all" class="platform-pill active" data-provider="all">
+          <i class="fa-solid fa-sparkles platform-pill-icon"></i>
+          <span>Toutes les plateformes</span>
+        </a>
+        <a href="filters.html?provider=netflix" class="platform-pill" data-provider="netflix">
+          <i class="fa-solid fa-n platform-pill-icon" style="color: #E50914;"></i>
+          <span>Netflix</span>
+        </a>
+        <a href="filters.html?provider=disney" class="platform-pill" data-provider="disney">
+          <i class="fa-solid fa-wand-magic-sparkles platform-pill-icon" style="color: #1172eb;"></i>
+          <span>Disney+</span>
+        </a>
+        <a href="filters.html?provider=prime" class="platform-pill" data-provider="prime">
+          <i class="fa-brands fa-amazon platform-pill-icon" style="color: #00a8e1;"></i>
+          <span>Prime Video</span>
+        </a>
+        <a href="filters.html?provider=max" class="platform-pill" data-provider="max">
+          <i class="fa-solid fa-bolt platform-pill-icon" style="color: #6a35ff;"></i>
+          <span>HBO Max</span>
+        </a>
+        <a href="filters.html?provider=appletv" class="platform-pill" data-provider="appletv">
+          <i class="fa-brands fa-apple platform-pill-icon" style="color: #ffffff;"></i>
+          <span>Apple TV+</span>
+        </a>
+        <a href="filters.html?provider=canal" class="platform-pill" data-provider="canal">
+          <i class="fa-solid fa-plus platform-pill-icon" style="color: #ffcc00;"></i>
+          <span>Canal+</span>
+        </a>
+        <a href="filters.html?provider=paramount" class="platform-pill" data-provider="paramount">
+          <i class="fa-solid fa-mountain platform-pill-icon" style="color: #0064ff;"></i>
+          <span>Paramount+</span>
+        </a>
+        <a href="filters.html?provider=crunchyroll" class="platform-pill" data-provider="crunchyroll">
+          <i class="fa-solid fa-fire-flame-curved platform-pill-icon" style="color: #ff6600;"></i>
+          <span>Crunchyroll</span>
+        </a>
+      </div>
+    </section>
+
     <!-- SECTION REPRENDRE LA LECTURE (CONTINUE WATCHING) -->
     <section class="section" id="continue-watching-section" style="display: none;">
       <div class="section-header-handy">
@@ -215,6 +257,19 @@
       </div>
       <div class="continue-watching-grid" id="continue-watching-grid">
         <!-- Cartes insérées dynamiquement -->
+      </div>
+    </section>
+
+    <!-- SECTION RECOMMANDÉ POUR VOUS (RECOMMANDATIONS PERSONNALISÉES) -->
+    <section class="section" id="recommendations-section">
+      <div class="section-header-handy">
+        <div>
+          <div class="section-subtitle-tag"><span class="gold-dash">—</span> POUR VOUS</div>
+          <h2 class="section-title-handy">Recommandé pour vous</h2>
+        </div>
+      </div>
+      <div class="handy-media-grid" id="recommendations-grid">
+        <!-- Recommandations personnalisées générées par JS -->
       </div>
     </section>
 
@@ -389,7 +444,7 @@
               </button>
             </div>
 
-            <!-- 3 QUICK ACTION CARDS -->
+            <!-- 4 QUICK ACTION CARDS -->
             <div class="handy-action-cards-grid">
               <button class="handy-action-card" id="modal-download-btn" title="Télécharger le contenu">
                 <div class="card-icon"><i class="fa-solid fa-download"></i></div>
@@ -399,6 +454,11 @@
               <button class="handy-action-card" id="modal-fav-btn" title="Ajouter à ma liste">
                 <div class="card-icon"><i class="fa-solid fa-plus" id="modal-fav-icon"></i></div>
                 <span class="card-label" id="modal-fav-text">Liste</span>
+              </button>
+
+              <button class="handy-action-card" id="modal-cast-btn" title="Diffuser sur TV (Chromecast / AirPlay)">
+                <div class="card-icon"><i class="fa-solid fa-tv"></i></div>
+                <span class="card-label">Cast / TV</span>
               </button>
 
               <button class="handy-action-card" id="modal-share-btn" title="Partager ce film">
@@ -570,6 +630,10 @@
 
             <!-- DROITE -->
             <div class="ctrl-right">
+              <button id="btn-cast-toggle" class="btn-ctrl-cast" title="Diffuser sur TV (Chromecast / AirPlay)">
+                <i class="fa-solid fa-tv"></i> <span>Cast</span>
+              </button>
+
               <button id="btn-subtitles-toggle" class="btn-ctrl-icon" title="Sous-titres">
                 <i class="fa-regular fa-closed-captioning"></i>
               </button>
@@ -591,6 +655,68 @@
         </div>
       </div>
 
+    </div>
+  </div>
+
+  <!-- MODAL DE DIFFUSION TV / CAST (CHROMECAST & AIRPLAY) -->
+  <div class="info-modal-backdrop hidden" id="cast-modal">
+    <div class="info-modal-card" style="max-width: 580px;">
+      <button class="info-modal-close" id="close-cast-modal-btn" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+      <div class="info-modal-header">
+        <span class="info-modal-badge">— DIFFUSION SUR GRAND ÉCRAN</span>
+        <h2 class="info-modal-title"><i class="fa-solid fa-tv" style="color: #E50914;"></i> Diffuser sur votre Téléviseur</h2>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;" id="cast-media-title">
+        Sélectionnez votre protocole de diffusion pour projeter votre flux HD sur votre TV connectée.
+      </p>
+
+      <div class="cast-options-grid">
+        <!-- Option 1: Google Cast / Chromecast -->
+        <button class="cast-device-card" id="btn-cast-chromecast">
+          <div class="cast-card-icon"><i class="fa-brands fa-chromecast"></i></div>
+          <div>
+            <div class="cast-card-title">Google Cast / Chromecast</div>
+            <div class="cast-card-desc">Transmettre via Google Cast ou navigateur Chrome</div>
+          </div>
+        </button>
+
+        <!-- Option 2: Apple AirPlay -->
+        <button class="cast-device-card" id="btn-cast-airplay">
+          <div class="cast-card-icon"><i class="fa-brands fa-apple"></i></div>
+          <div>
+            <div class="cast-card-title">Apple AirPlay</div>
+            <div class="cast-card-desc">Diffuser sur Apple TV ou smart TV compatible AirPlay</div>
+          </div>
+        </button>
+
+        <!-- Option 3: Navigateur TV / Smart TV Direct -->
+        <button class="cast-device-card" id="btn-cast-smart-tv">
+          <div class="cast-card-icon"><i class="fa-solid fa-display"></i></div>
+          <div>
+            <div class="cast-card-title">Smart TV Direct</div>
+            <div class="cast-card-desc">Samsung Tizen, LG WebOS, Android TV, Fire TV</div>
+          </div>
+        </button>
+
+        <!-- Option 4: Lecteur externe / VLC -->
+        <button class="cast-device-card" id="btn-cast-external-vlc">
+          <div class="cast-card-icon"><i class="fa-solid fa-play"></i></div>
+          <div>
+            <div class="cast-card-title">Lecteur Externe / Web Video Caster</div>
+            <div class="cast-card-desc">Ouvrir le flux direct pour cast automatique</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- STREAM URL BOX POUR SMART TV -->
+      <div class="cast-qr-box" id="cast-tv-box">
+        <span style="font-size: 0.85rem; font-weight: 700; color: #ffffff;">Lien de diffusion direct pour navigateur Smart TV :</span>
+        <div class="cast-stream-url-box">
+          <input type="text" id="cast-direct-url-input" class="cast-url-input" readonly value="" placeholder="Lien du flux direct">
+          <button class="btn-copy-cast-url" id="btn-copy-cast-url"><i class="fa-regular fa-copy"></i> Copier</button>
+        </div>
+        <span style="font-size: 0.76rem; color: #888888;">Ouvrez simplement ce lien dans le navigateur de votre TV connectée.</span>
+      </div>
     </div>
   </div>
 

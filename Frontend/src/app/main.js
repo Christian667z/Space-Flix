@@ -45,6 +45,7 @@ const state = {
   filterYear: 'all',
   filterLang: 'all',
   filterSort: 'popularity.desc',
+  filterProvider: 'all',
   filterPage: 1,
   filterMediaList: [],
   isFilterActive: false,
@@ -76,6 +77,7 @@ const DOM = {
   filterYearSelect: document.getElementById('filter-year-select'),
   filterLangSelect: document.getElementById('filter-lang-select'),
   filterSortSelect: document.getElementById('filter-sort-select'),
+  filterProviderSelect: document.getElementById('filter-provider-select'),
   btnResetFilters: document.getElementById('btn-reset-filters'),
   filteredResultsWrapper: document.getElementById('filtered-results-wrapper'),
   filteredCatalogGrid: document.getElementById('filtered-catalog-grid'),
@@ -105,6 +107,8 @@ const DOM = {
 
   continueWatchingSection: document.getElementById('continue-watching-section'),
   continueWatchingGrid: document.getElementById('continue-watching-grid'),
+  recommendationsSection: document.getElementById('recommendations-section'),
+  recommendationsGrid: document.getElementById('recommendations-grid'),
   trendingSection: document.getElementById('trending-section'),
   trendingGrid: document.getElementById('trending-grid'),
   moviesSection: document.getElementById('movies-section'),
@@ -151,13 +155,25 @@ const DOM = {
   modalDownloadText: document.getElementById('modal-download-text'),
   modalFavBtn: document.getElementById('modal-fav-btn'),
   modalFavText: document.getElementById('modal-fav-text'),
+  modalCastBtn: document.getElementById('modal-cast-btn'),
+  btnCastToggle: document.getElementById('btn-cast-toggle'),
   seriesEpisodesWrapper: document.getElementById('series-episodes-wrapper'),
   seasonSelect: document.getElementById('season-select'),
   episodesContainer: document.getElementById('episodes-container'),
   similarMediaSection: document.getElementById('similar-media-section'),
   similarMediaTrack: document.getElementById('similar-media-track'),
 
-  // Modals & Download
+  // Modals & Download / Cast
+  castModal: document.getElementById('cast-modal'),
+  closeCastModalBtn: document.getElementById('close-cast-modal-btn'),
+  castMediaTitle: document.getElementById('cast-media-title'),
+  castDirectUrlInput: document.getElementById('cast-direct-url-input'),
+  btnCopyCastUrl: document.getElementById('btn-copy-cast-url'),
+  btnCastChromecast: document.getElementById('btn-cast-chromecast'),
+  btnCastAirplay: document.getElementById('btn-cast-airplay'),
+  btnCastSmartTv: document.getElementById('btn-cast-smart-tv'),
+  btnCastExternalVlc: document.getElementById('btn-cast-external-vlc'),
+
   downloadModal: document.getElementById('download-modal'),
   closeDownloadModalBtn: document.getElementById('close-download-modal-btn'),
   downloadMediaTitle: document.getElementById('download-media-title'),
@@ -200,13 +216,19 @@ const AUTH_ERROR_MESSAGES = {
   'User already registered': 'Un compte existe déjà avec cet e-mail.',
   'Email not confirmed': "Veuillez confirmer votre e-mail avant de vous connecter.",
   'Password should be at least 6 characters': 'Le mot de passe doit contenir au moins 6 caractères.',
-  'Unsupported provider: provider is not enabled': "La connexion Google n'est pas encore activée sur le projet Supabase."
+  'Unsupported provider: provider is not enabled': "Le fournisseur Google OAuth n'est pas encore activé dans le tableau de bord Supabase (Authentication > Providers > Google).",
+  'Unsupported provider': "Le fournisseur Google OAuth n'est pas encore activé dans le tableau de bord Supabase.",
+  'provider is not enabled': "Le fournisseur Google OAuth doit être activé dans votre tableau de bord Supabase.",
+  'redirect_uri_mismatch': "L'URL de redirection doit être autorisée dans Supabase (Authentication > URL Configuration).",
+  'access_denied': "L'accès via votre compte Google a été refusé.",
+  'popup_closed_by_user': "La fenêtre de connexion Google a été fermée.",
+  'Failed to fetch': "Impossible de joindre le serveur d'authentification. Vérifiez votre connexion."
 };
 
 function translateAuthError(message) {
   if (!message) return 'Une erreur est survenue lors de la connexion.';
   for (const [key, translation] of Object.entries(AUTH_ERROR_MESSAGES)) {
-    if (message.includes(key)) return translation;
+    if (message.toLowerCase().includes(key.toLowerCase())) return translation;
   }
   return message;
 }
@@ -321,20 +343,34 @@ export const AuthService = {
   },
 
   async loginWithGoogle() {
+    // Calcul de l'URL de redirection propre (ex: https://.../ ou http://localhost:3000/)
+    const redirectUrl = window.location.origin + window.location.pathname;
+
     if (supabaseClient) {
       try {
         const { data, error } = await supabaseClient.auth.signInWithOAuth({
           provider: 'google',
           options: {
-            redirectTo: window.location.href
+            redirectTo: redirectUrl,
+            queryParams: {
+              access_type: 'offline',
+              prompt: 'select_account'
+            }
           }
         });
-        if (!error && data?.url) {
-          window.location.href = data.url;
-          return data;
+
+        if (error) {
+          throw new Error(translateAuthError(error.message));
         }
-      } catch (e) {
-        console.warn("Supabase Google OAuth direct redirect fallback:", e);
+
+        if (data?.url) {
+          // Redirection vers le flux d'authentification Google OAuth officiel
+          window.location.href = data.url;
+          return null;
+        }
+      } catch (oauthErr) {
+        console.warn("⚠️ [Google OAuth] Erreur lors de l'appel signInWithOAuth:", oauthErr);
+        throw new Error(translateAuthError(oauthErr.message || 'Échec de la communication avec le service Google OAuth.'));
       }
     }
 
@@ -384,7 +420,36 @@ document.addEventListener('DOMContentLoaded', async () => {
   // 2. Setup des écouteurs d'événements
   setupEventListeners();
 
-  // 3. Initialisation de la session Supabase
+  // 3. Initialisation de la session Supabase et retour OAuth
+  // Détection des retours d'authentification Google OAuth (erreurs ou succès dans l'URL)
+  if (window.location.hash || window.location.search) {
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const searchParams = new URLSearchParams(window.location.search);
+    const oauthError = hashParams.get('error_description') || searchParams.get('error_description') || hashParams.get('error') || searchParams.get('error');
+
+    if (oauthError) {
+      const friendlyMsg = translateAuthError(oauthError);
+      console.warn("⚠️ [OAuth Supabase] Message d'erreur:", oauthError);
+      setTimeout(() => {
+        showToast(friendlyMsg);
+        if (DOM.authErrorMsg) {
+          DOM.authErrorMsg.textContent = friendlyMsg;
+          DOM.authErrorMsg.classList.remove('hidden');
+        }
+      }, 500);
+      // Nettoyage de l'URL
+      window.history.replaceState(null, '', window.location.pathname);
+    } else if (hashParams.get('access_token')) {
+      setTimeout(() => {
+        showToast('Connexion avec Google réussie !');
+      }, 600);
+      // Nettoyage du fragment de hash
+      setTimeout(() => {
+        window.history.replaceState(null, '', window.location.pathname);
+      }, 1200);
+    }
+  }
+
   try {
     await AuthService.init(async (user) => {
       updateAuthHeaderUI();
@@ -401,6 +466,27 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateAuthHeaderUI();
   await loadUserData();
   await refreshCatalog();
+
+  // Détection des filtres passés via l'URL (ex: ?provider=netflix ou ?genre=Action)
+  const urlParams = new URLSearchParams(window.location.search);
+  const providerParam = urlParams.get('provider');
+  const genreParam = urlParams.get('genre');
+  const typeParam = urlParams.get('type');
+
+  if (providerParam && DOM.filterProviderSelect) {
+    DOM.filterProviderSelect.value = providerParam;
+    state.filterProvider = providerParam;
+  }
+  if (genreParam && DOM.filterGenreSelect) {
+    DOM.filterGenreSelect.value = genreParam;
+  }
+  if (typeParam && DOM.filterTypeSelect) {
+    DOM.filterTypeSelect.value = typeParam;
+  }
+
+  if (providerParam || genreParam || typeParam) {
+    applyAdvancedFilters(true);
+  }
 
   if (window.location.pathname.includes('filters.html')) {
     state.currentNav = 'filters';
@@ -732,23 +818,27 @@ function renderAllSections() {
   if (DOM.faqSection) DOM.faqSection.style.display = 'block';
 
   renderContinueWatchingSection();
+  renderRecommendationsSection();
   if (DOM.latestGrid) renderMediaGrid(DOM.latestGrid, latestList.slice(0, 8));
 
   if (state.currentNav === 'movies') {
     if (DOM.trendingSection) DOM.trendingSection.style.display = 'none';
     if (DOM.latestSection) DOM.latestSection.style.display = 'none';
+    if (DOM.recommendationsSection) DOM.recommendationsSection.style.display = 'none';
     if (DOM.moviesSection) DOM.moviesSection.style.display = 'block';
     if (DOM.tvSection) DOM.tvSection.style.display = 'none';
     renderMediaGrid(DOM.moviesGrid, displayMovies);
   } else if (state.currentNav === 'tv') {
     if (DOM.trendingSection) DOM.trendingSection.style.display = 'none';
     if (DOM.latestSection) DOM.latestSection.style.display = 'none';
+    if (DOM.recommendationsSection) DOM.recommendationsSection.style.display = 'none';
     if (DOM.moviesSection) DOM.moviesSection.style.display = 'none';
     if (DOM.tvSection) DOM.tvSection.style.display = 'block';
     renderMediaGrid(DOM.tvGrid, displayTV);
   } else if (state.currentNav === 'trending') {
     if (DOM.trendingSection) DOM.trendingSection.style.display = 'block';
     if (DOM.latestSection) DOM.latestSection.style.display = 'none';
+    if (DOM.recommendationsSection) DOM.recommendationsSection.style.display = 'none';
     if (DOM.moviesSection) DOM.moviesSection.style.display = 'none';
     if (DOM.tvSection) DOM.tvSection.style.display = 'none';
     renderMediaGrid(DOM.trendingGrid, displayTrending);
@@ -760,6 +850,26 @@ function renderAllSections() {
     renderMediaGrid(DOM.trendingGrid, displayTrending);
     renderMediaGrid(DOM.moviesGrid, displayMovies);
     renderMediaGrid(DOM.tvGrid, displayTV);
+  }
+}
+
+// Rend la section des recommandations personnalisées basées sur l'historique et favoris
+async function renderRecommendationsSection() {
+  if (!DOM.recommendationsGrid) return;
+  try {
+    const recs = await TMDBService.getPersonalizedRecommendations(state.continueWatchingList, state.favorites);
+    if (recs && recs.length > 0) {
+      if (DOM.recommendationsSection) DOM.recommendationsSection.style.display = 'block';
+      renderMediaGrid(DOM.recommendationsGrid, recs.slice(0, 8));
+    } else {
+      const topPicks = state.mediaList.filter(m => m.is_trending || (m.rating && parseFloat(m.rating) >= 7.8));
+      if (topPicks.length > 0) {
+        if (DOM.recommendationsSection) DOM.recommendationsSection.style.display = 'block';
+        renderMediaGrid(DOM.recommendationsGrid, topPicks.slice(0, 8));
+      }
+    }
+  } catch (err) {
+    console.warn("Info recommandations personnalisées:", err.message);
   }
 }
 
@@ -835,8 +945,13 @@ export async function applyAdvancedFilters(resetPage = true) {
   const year = DOM.filterYearSelect?.value || 'all';
   const lang = DOM.filterLangSelect?.value || 'all';
   const sortBy = DOM.filterSortSelect?.value || 'popularity.desc';
+  const provider = DOM.filterProviderSelect?.value || state.filterProvider || 'all';
 
-  const isDefault = type === 'all' && genre === 'Tous' && year === 'all' && lang === 'all' && sortBy === 'popularity.desc';
+  // Synchronisation visuelle des badges plateformes
+  document.querySelectorAll('.platform-pill').forEach(pill => {
+    const pVal = pill.getAttribute('data-provider');
+    pill.classList.toggle('active', pVal === provider);
+  });
   
   // Masquer le placeholder initial et afficher le conteneur de résultats
   const initialPlaceholder = document.getElementById('filter-initial-placeholder');
@@ -860,9 +975,10 @@ export async function applyAdvancedFilters(resetPage = true) {
     let typeName = 'Films & Séries';
     if (type === 'movie') typeName = 'Films';
     if (type === 'tv') typeName = 'Séries TV & Animes';
+    const providerStr = provider !== 'all' ? `${provider.toUpperCase()} • ` : '';
     const genreStr = genre !== 'Tous' ? ` • ${genre}` : '';
     const yearStr = year !== 'all' ? ` (${year})` : '';
-    DOM.filteredCatalogTitle.textContent = `${typeName}${genreStr}${yearStr}`;
+    DOM.filteredCatalogTitle.textContent = `${providerStr}${typeName}${genreStr}${yearStr}`;
   }
 
   if (DOM.filteredCatalogBadge) {
@@ -888,6 +1004,7 @@ export async function applyAdvancedFilters(resetPage = true) {
       year,
       lang,
       sortBy,
+      provider,
       page: state.filterPage
     });
 
@@ -923,6 +1040,11 @@ export function resetAdvancedFilters() {
   if (DOM.filterYearSelect) DOM.filterYearSelect.value = 'all';
   if (DOM.filterLangSelect) DOM.filterLangSelect.value = 'all';
   if (DOM.filterSortSelect) DOM.filterSortSelect.value = 'popularity.desc';
+  if (DOM.filterProviderSelect) DOM.filterProviderSelect.value = 'all';
+  state.filterProvider = 'all';
+  document.querySelectorAll('.platform-pill').forEach(pill => {
+    pill.classList.toggle('active', pill.getAttribute('data-provider') === 'all');
+  });
   state.filterPage = 1;
   state.filterMediaList = [];
   state.isFilterActive = false;
@@ -1826,6 +1948,38 @@ export function closeDownloadModal() {
   DOM.downloadModal?.classList.add('hidden');
 }
 
+// --- GESTION DU CAST (CHROMECAST / AIRPLAY / SMART TV) ---
+export function openCastModal() {
+  if (!state.activeMedia) {
+    showToast('Sélectionnez d\'abord un film ou une série à caster.');
+    return;
+  }
+  const media = state.activeMedia;
+  const isMovie = media.type === 'movie';
+  const title = media.title || 'Média';
+  const season = state.activeSeason || 1;
+  const episode = state.activeEpisodeNumber || 1;
+  const displayTitle = isMovie ? title : `${title} - Saison ${season}, Ep. ${episode}`;
+
+  if (DOM.castMediaTitle) {
+    DOM.castMediaTitle.textContent = `Prêt à diffuser "${displayTitle}" en streaming HD sur votre téléviseur.`;
+  }
+
+  const currentServers = getConfiguredServers(media, season, episode);
+  const activeServer = currentServers[state.activeServerIndex] || currentServers[0] || { url: DOM.videoIframe?.src || '' };
+  const currentStreamUrl = DOM.videoIframe?.src || activeServer.url || window.location.href;
+
+  if (DOM.castDirectUrlInput) {
+    DOM.castDirectUrlInput.value = currentStreamUrl;
+  }
+
+  DOM.castModal?.classList.remove('hidden');
+}
+
+export function closeCastModal() {
+  DOM.castModal?.classList.add('hidden');
+}
+
 // --- SETUP DES EVENT LISTENERS ---
 function setupEventListeners() {
   // Navigation Links
@@ -2131,7 +2285,7 @@ function setupEventListeners() {
     loadTrailerVideo();
   });
 
-  // Actions Modal Player Fav & Download
+  // Actions Modal Player Fav & Download & Cast
   DOM.modalDownloadBtn?.addEventListener('click', () => {
     openDownloadModal();
   });
@@ -2139,6 +2293,105 @@ function setupEventListeners() {
   DOM.closeDownloadModalBtn?.addEventListener('click', closeDownloadModal);
   DOM.downloadModal?.addEventListener('click', (e) => {
     if (e.target === DOM.downloadModal) closeDownloadModal();
+  });
+
+  // Gestion du bouton Cast et Modal
+  DOM.modalCastBtn?.addEventListener('click', openCastModal);
+  DOM.btnCastToggle?.addEventListener('click', openCastModal);
+  DOM.closeCastModalBtn?.addEventListener('click', closeCastModal);
+  DOM.castModal?.addEventListener('click', (e) => {
+    if (e.target === DOM.castModal) closeCastModal();
+  });
+
+  // Copie de l'URL directe de Cast
+  DOM.btnCopyCastUrl?.addEventListener('click', () => {
+    const url = DOM.castDirectUrlInput?.value || '';
+    if (url) {
+      navigator.clipboard.writeText(url).then(() => {
+        const orig = DOM.btnCopyCastUrl.innerHTML;
+        DOM.btnCopyCastUrl.innerHTML = '<i class="fa-solid fa-check"></i> Copié !';
+        showToast('Lien direct de diffusion copié !');
+        setTimeout(() => { DOM.btnCopyCastUrl.innerHTML = orig; }, 2500);
+      });
+    }
+  });
+
+  // Option Cast: Google Chromecast
+  DOM.btnCastChromecast?.addEventListener('click', () => {
+    const url = DOM.castDirectUrlInput?.value || DOM.videoIframe?.src || '';
+    if (window.chrome && window.chrome.cast && window.chrome.cast.isAvailable) {
+      try {
+        window.chrome.cast.requestSession(() => {
+          showToast('Connexion à votre appareil Chromecast en cours...');
+        }, (err) => {
+          showToast('Sélectionnez votre Chromecast dans le menu du navigateur.');
+        });
+      } catch {
+        showToast('Appuyez sur "Caster" dans le menu Google Chrome (⋮).');
+      }
+    } else if (navigator.share) {
+      navigator.share({
+        title: state.activeMedia?.title || 'SpaceFlix Stream',
+        url: url
+      }).then(() => showToast('Partage vers appareil connecté initié !')).catch(() => {});
+    } else {
+      showToast('Ouvrez le menu Chrome (⋮) > "Caster" pour diffuser sur votre TV.');
+    }
+  });
+
+  // Option Cast: Apple AirPlay
+  DOM.btnCastAirplay?.addEventListener('click', () => {
+    if (window.WebKitPlaybackTargetAvailabilityEvent || (DOM.videoIframe && DOM.videoIframe.webkitShowPlaybackTargetPicker)) {
+      try {
+        DOM.videoIframe.webkitShowPlaybackTargetPicker();
+        showToast('Recherche d\'écrans Apple TV / AirPlay...');
+      } catch {
+        showToast('Utilisez le centre de contrôle iOS / macOS > Recopie de l\'écran AirPlay.');
+      }
+    } else {
+      showToast('Sur iPhone/iPad/Mac : activez "Recopie de l\'écran" AirPlay.');
+    }
+  });
+
+  // Option Cast: Smart TV Direct
+  DOM.btnCastSmartTv?.addEventListener('click', () => {
+    const url = DOM.castDirectUrlInput?.value || window.location.href;
+    navigator.clipboard.writeText(url).then(() => {
+      showToast('URL copiée ! Ouvrez le navigateur de votre Smart TV (Samsung, LG, etc.).');
+    });
+  });
+
+  // Option Cast: Lecteur Externe / VLC / Web Video Caster
+  DOM.btnCastExternalVlc?.addEventListener('click', () => {
+    const url = DOM.castDirectUrlInput?.value || '';
+    if (url) {
+      window.open(url, '_blank');
+      showToast('Ouverture du flux dans votre lecteur externe...');
+    }
+  });
+
+  // Écouteur sélecteur et badges Plateformes
+  DOM.filterProviderSelect?.addEventListener('change', (e) => {
+    state.filterProvider = e.target.value;
+    applyAdvancedFilters(true);
+  });
+
+  document.querySelectorAll('.platform-pill').forEach(pill => {
+    pill.addEventListener('click', () => {
+      const prov = pill.getAttribute('data-provider') || 'all';
+      if (DOM.filterProviderSelect) DOM.filterProviderSelect.value = prov;
+      state.filterProvider = prov;
+      applyAdvancedFilters(true);
+    });
+  });
+
+  // Liens de la barre des plateformes sur l'accueil (Netflix, Disney+, etc.)
+  document.querySelectorAll('.platform-card-btn, [data-provider-filter]').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      const prov = btn.getAttribute('data-provider-filter') || btn.getAttribute('data-provider') || 'netflix';
+      window.location.href = `filters.html?provider=${prov}`;
+    });
   });
 
   DOM.modalFavBtn?.addEventListener('click', async () => {
@@ -2313,8 +2566,12 @@ function setupEventListeners() {
 
   // Google Login OAuth
   DOM.googleLoginBtn?.addEventListener('click', async () => {
+    const origHtml = DOM.googleLoginBtn.innerHTML;
     try {
       if (DOM.authErrorMsg) DOM.authErrorMsg.classList.add('hidden');
+      DOM.googleLoginBtn.disabled = true;
+      DOM.googleLoginBtn.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin" style="color: #ff3344; margin-right: 8px;"></i> Connexion Google en cours...';
+
       const user = await AuthService.loginWithGoogle();
       if (user) {
         updateAuthHeaderUI();
@@ -2325,9 +2582,12 @@ function setupEventListeners() {
       }
     } catch (err) {
       if (DOM.authErrorMsg) {
-        DOM.authErrorMsg.textContent = err.message || 'Connexion Google temporairement indisponible.';
+        DOM.authErrorMsg.textContent = translateAuthError(err.message || 'Connexion Google temporairement indisponible.');
         DOM.authErrorMsg.classList.remove('hidden');
       }
+    } finally {
+      DOM.googleLoginBtn.disabled = false;
+      DOM.googleLoginBtn.innerHTML = origHtml;
     }
   });
 

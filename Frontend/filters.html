@@ -838,8 +838,64 @@
         </div>
       </div>
 
+      <!-- QUICK PLATFORMS PILLS BAR -->
+      <div class="platforms-scroll-wrapper" id="filter-platforms-bar" style="margin-bottom: 1.2rem; padding: 4px 0 10px;">
+        <button class="platform-pill active" data-provider="all" type="button">
+          <i class="fa-solid fa-sparkles platform-pill-icon"></i>
+          <span>Toutes</span>
+        </button>
+        <button class="platform-pill" data-provider="netflix" type="button">
+          <i class="fa-solid fa-n platform-pill-icon" style="color: #E50914;"></i>
+          <span>Netflix</span>
+        </button>
+        <button class="platform-pill" data-provider="disney" type="button">
+          <i class="fa-solid fa-wand-magic-sparkles platform-pill-icon" style="color: #1172eb;"></i>
+          <span>Disney+</span>
+        </button>
+        <button class="platform-pill" data-provider="prime" type="button">
+          <i class="fa-brands fa-amazon platform-pill-icon" style="color: #00a8e1;"></i>
+          <span>Prime Video</span>
+        </button>
+        <button class="platform-pill" data-provider="max" type="button">
+          <i class="fa-solid fa-bolt platform-pill-icon" style="color: #6a35ff;"></i>
+          <span>HBO Max</span>
+        </button>
+        <button class="platform-pill" data-provider="appletv" type="button">
+          <i class="fa-brands fa-apple platform-pill-icon" style="color: #ffffff;"></i>
+          <span>Apple TV+</span>
+        </button>
+        <button class="platform-pill" data-provider="canal" type="button">
+          <i class="fa-solid fa-plus platform-pill-icon" style="color: #ffcc00;"></i>
+          <span>Canal+</span>
+        </button>
+        <button class="platform-pill" data-provider="paramount" type="button">
+          <i class="fa-solid fa-mountain platform-pill-icon" style="color: #0064ff;"></i>
+          <span>Paramount+</span>
+        </button>
+        <button class="platform-pill" data-provider="crunchyroll" type="button">
+          <i class="fa-solid fa-fire-flame-curved platform-pill-icon" style="color: #ff6600;"></i>
+          <span>Crunchyroll</span>
+        </button>
+      </div>
+
       <!-- FORMULAIRE DE FILTRES -->
-      <div class="filter-sheet-grid">
+      <div class="filter-sheet-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)) !important;">
+        <!-- Plateforme -->
+        <div class="filter-sheet-group">
+          <label><i class="fa-solid fa-tv"></i> Plateforme</label>
+          <select id="filter-provider-select" class="filter-sheet-select filter-select">
+            <option value="all">Toutes plateformes</option>
+            <option value="netflix">Netflix</option>
+            <option value="disney">Disney+</option>
+            <option value="prime">Prime Video</option>
+            <option value="max">HBO Max</option>
+            <option value="appletv">Apple TV+</option>
+            <option value="canal">Canal+</option>
+            <option value="paramount">Paramount+</option>
+            <option value="crunchyroll">Crunchyroll</option>
+          </select>
+        </div>
+
         <!-- Format -->
         <div class="filter-sheet-group">
           <label><i class="fa-solid fa-film"></i> Format</label>
@@ -1325,6 +1381,209 @@
       </div>
     </div>
   </footer>
+
+  <!-- MODAL DE DIFFUSION TV / CAST (CHROMECAST & AIRPLAY) -->
+  <div class="info-modal-backdrop hidden" id="cast-modal">
+    <div class="info-modal-card" style="max-width: 580px;">
+      <button class="info-modal-close" id="close-cast-modal-btn" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+      <div class="info-modal-header">
+        <span class="info-modal-badge">— DIFFUSION SUR GRAND ÉCRAN</span>
+        <h2 class="info-modal-title"><i class="fa-solid fa-tv" style="color: #E50914;"></i> Diffuser sur votre Téléviseur</h2>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 0.5rem;" id="cast-media-title">
+        Sélectionnez votre protocole de diffusion pour projeter votre flux HD sur votre TV connectée.
+      </p>
+
+      <div class="cast-options-grid">
+        <!-- Option 1: Google Cast / Chromecast -->
+        <button class="cast-device-card" id="btn-cast-chromecast">
+          <div class="cast-card-icon"><i class="fa-brands fa-chromecast"></i></div>
+          <div>
+            <div class="cast-card-title">Google Cast / Chromecast</div>
+            <div class="cast-card-desc">Transmettre via Google Cast ou navigateur Chrome</div>
+          </div>
+        </button>
+
+        <!-- Option 2: Apple AirPlay -->
+        <button class="cast-device-card" id="btn-cast-airplay">
+          <div class="cast-card-icon"><i class="fa-brands fa-apple"></i></div>
+          <div>
+            <div class="cast-card-title">Apple AirPlay</div>
+            <div class="cast-card-desc">Diffuser sur Apple TV ou smart TV compatible AirPlay</div>
+          </div>
+        </button>
+
+        <!-- Option 3: Navigateur TV / Smart TV Direct -->
+        <button class="cast-device-card" id="btn-cast-smart-tv">
+          <div class="cast-card-icon"><i class="fa-solid fa-display"></i></div>
+          <div>
+            <div class="cast-card-title">Smart TV Direct</div>
+            <div class="cast-card-desc">Samsung Tizen, LG WebOS, Android TV, Fire TV</div>
+          </div>
+        </button>
+
+        <!-- Option 4: Lecteur externe / VLC -->
+        <button class="cast-device-card" id="btn-cast-external-vlc">
+          <div class="cast-card-icon"><i class="fa-solid fa-play"></i></div>
+          <div>
+            <div class="cast-card-title">Lecteur Externe / Web Video Caster</div>
+            <div class="cast-card-desc">Ouvrir le flux direct pour cast automatique</div>
+          </div>
+        </button>
+      </div>
+
+      <!-- STREAM URL BOX POUR SMART TV -->
+      <div class="cast-qr-box" id="cast-tv-box">
+        <span style="font-size: 0.85rem; font-weight: 700; color: #ffffff;">Lien de diffusion direct pour navigateur Smart TV :</span>
+        <div class="cast-stream-url-box">
+          <input type="text" id="cast-direct-url-input" class="cast-url-input" readonly value="" placeholder="Lien du flux direct">
+          <button class="btn-copy-cast-url" id="btn-copy-cast-url"><i class="fa-regular fa-copy"></i> Copier</button>
+        </div>
+        <span style="font-size: 0.76rem; color: #888888;">Ouvrez simplement ce lien dans le navigateur de votre TV connectée.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL DE TÉLÉCHARGEMENT DE CONTENU -->
+  <div class="info-modal-backdrop hidden" id="download-modal">
+    <div class="info-modal-card" style="max-width: 540px;">
+      <button class="info-modal-close" id="close-download-modal-btn" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+      <div class="info-modal-header">
+        <span class="info-modal-badge">— SPACEFLIX TÉLÉCHARGEMENT</span>
+        <h2 class="info-modal-title" id="download-media-title">Télécharger le média</h2>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1.2rem;" id="download-media-subtitle">
+        Sélectionnez votre méthode de téléchargement pour enregistrer ce contenu et le regarder hors-ligne.
+      </p>
+
+      <div class="download-sources-list" id="download-sources-container" style="display: flex; flex-direction: column; gap: 0.75rem;">
+        <!-- Généré dynamiquement par JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL RACCOURCIS CLAVIER -->
+  <div class="info-modal-backdrop hidden" id="shortcuts-modal">
+    <div class="info-modal-card" style="max-width: 480px;">
+      <button class="info-modal-close" id="close-shortcuts-modal-btn" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+      <div class="info-modal-header">
+        <span class="info-modal-badge">— SPACEFLIX COMMANDES</span>
+        <h2 class="info-modal-title">Raccourcis Clavier du Lecteur</h2>
+      </div>
+      <div class="shortcuts-list" style="padding: 1rem 0;">
+        <div class="shortcut-item"><kbd>Espace</kbd> <span>Lecture / Pause</span></div>
+        <div class="shortcut-item"><kbd>→</kbd> <span>Avancer de 10 secondes</span></div>
+        <div class="shortcut-item"><kbd>←</kbd> <span>Reculer de 10 secondes</span></div>
+        <div class="shortcut-item"><kbd>F</kbd> <span>Activer / Quitter le plein écran</span></div>
+        <div class="shortcut-item"><kbd>M</kbd> <span>Couper / Activer le son (Muet)</span></div>
+        <div class="shortcut-item"><kbd>0 - 9</kbd> <span>Naviguer à 0% - 90% du média</span></div>
+        <div class="shortcut-item"><kbd>Échap</kbd> <span>Fermer le lecteur</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL SCRIPT SQL SUPABASE -->
+  <div class="info-modal-backdrop hidden" id="sql-modal">
+    <div class="info-modal-card" style="max-width: 680px;">
+      <button class="info-modal-close" id="close-sql-modal-btn" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+      <div class="info-modal-header">
+        <span class="info-modal-badge">— SUPABASE SQL EDITOR</span>
+        <h2 class="info-modal-title">Script SQL pour Reprise & Authentification</h2>
+      </div>
+      <p style="color: var(--text-muted); font-size: 0.9rem; margin-bottom: 1rem;">
+        Copiez ce script et collez-le dans <strong>Supabase &gt; SQL Editor &gt; New Query &gt; Run</strong> pour configurer la base de données de reprise de lecture, profils, favoris et historique.
+      </p>
+      <div class="sql-code-box">
+        <button class="btn-copy-sql" id="btn-copy-sql-code"><i class="fa-regular fa-copy"></i> Copier le SQL</button>
+        <pre><code id="sql-code-display">-- Table Reprise de lecture & Historique
+CREATE TABLE IF NOT EXISTS public.user_history (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    media_id TEXT NOT NULL,
+    media_title VARCHAR(255),
+    media_type VARCHAR(20) DEFAULT 'movie',
+    poster_path TEXT,
+    backdrop_path TEXT,
+    season INTEGER DEFAULT 1,
+    episode INTEGER DEFAULT 1,
+    progress_seconds NUMERIC DEFAULT 0,
+    duration_seconds NUMERIC DEFAULT 0,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(user_id, media_id, season, episode)
+);
+
+-- Table Favoris ("Ma Liste")
+CREATE TABLE IF NOT EXISTS public.favorites (
+    id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    media_id TEXT NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+    UNIQUE(user_id, media_id)
+);</code></pre>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL D'AUTHENTIFICATION & INSCRIPTION (NETFLIX STYLE) -->
+  <div class="auth-modal-backdrop hidden" id="auth-modal">
+    <div class="auth-modal-card">
+      <button class="auth-modal-close" id="close-auth-btn" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+
+      <div class="auth-header">
+        <h2 class="auth-title" id="auth-modal-title">Espace Membre SpaceFlix</h2>
+        <p class="auth-subtitle" id="auth-modal-subtitle">Connectez-vous pour synchroniser vos favoris et la reprise de lecture sur tous vos appareils.</p>
+      </div>
+
+      <div class="auth-tabs">
+        <button class="auth-tab-btn active" id="tab-login-btn">Se connecter</button>
+        <button class="auth-tab-btn" id="tab-signup-btn">S'inscrire</button>
+      </div>
+
+      <!-- BOUTON CONNEXION GOOGLE OAUTH -->
+      <button class="google-auth-btn" id="google-login-btn">
+        <svg class="google-icon" width="18" height="18" viewBox="0 0 24 24">
+          <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+          <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+          <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+          <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+        </svg>
+        <span>Continuer avec Google</span>
+      </button>
+
+      <div class="auth-divider">
+        <span>ou avec votre e-mail</span>
+      </div>
+
+      <!-- FORMULAIRE DE CONNEXION / INSCRIPTION -->
+      <form id="auth-form" class="auth-form">
+        <div class="auth-field" id="name-field-group" style="display: none;">
+          <label for="auth-name">Nom d'utilisateur</label>
+          <input type="text" id="auth-name" placeholder="Ex: Alex Flix" autocomplete="name">
+        </div>
+
+        <div class="auth-field">
+          <label for="auth-email">Adresse E-mail</label>
+          <input type="email" id="auth-email" placeholder="nom@exemple.com" required autocomplete="email">
+        </div>
+
+        <div class="auth-field">
+          <label for="auth-password">Mot de passe</label>
+          <div class="password-input-wrap">
+            <input type="password" id="auth-password" placeholder="••••••••" required autocomplete="current-password">
+            <button type="button" class="toggle-password-btn" id="toggle-pwd-btn" aria-label="Afficher le mot de passe">
+              <i class="fa-regular fa-eye"></i>
+            </button>
+          </div>
+        </div>
+
+        <div class="auth-error-msg hidden" id="auth-error-msg"></div>
+
+        <button type="submit" class="auth-submit-btn" id="auth-submit-btn">
+          Se connecter
+        </button>
+      </form>
+    </div>
+  </div>
 
   <script type="module" src="src/app/main.js"></script>
 </body>

@@ -304,7 +304,19 @@ export const TMDBService = {
       'Sci-Fi': 878, 'Science-Fiction': 878, 'Thriller': 53, 'Biopic': 36
     };
 
+    const providerMap = {
+      'netflix': 8,
+      'disney': 337,
+      'prime': 119,
+      'max': 1899,
+      'appletv': 350,
+      'canal': 381,
+      'paramount': 531,
+      'crunchyroll': 283
+    };
+
     const genreId = genre && genre !== 'Tous' ? genreMap[genre] : null;
+    const providerId = provider && provider !== 'all' ? (providerMap[provider.toLowerCase()] || provider) : null;
 
     const sortParam = sortBy || 'popularity.desc';
     const minVotes = sortParam.includes('vote_average') ? 50 : undefined;
@@ -322,6 +334,10 @@ export const TMDBService = {
     };
     if (minVotes) commonParams['vote_count.gte'] = String(minVotes);
     if (genreId) commonParams['with_genres'] = String(genreId);
+    if (providerId) {
+      commonParams['with_watch_providers'] = String(providerId);
+      commonParams['watch_region'] = 'FR';
+    }
     if (withOriginalLang) commonParams['with_original_language'] = withOriginalLang;
 
     try {
@@ -454,6 +470,83 @@ export const TMDBService = {
     } catch (err) {
       console.warn(`Info TV Season (${cleanId} S${seasonNumber}):`, err.message);
       return [];
+    }
+  },
+
+  /**
+   * Récupère les recommandations et titres similaires pour un média donné
+   */
+  async getMediaRecommendations(tmdbId, mediaType = 'movie') {
+    if (!tmdbId) return [];
+    const type = mediaType === 'tv' ? 'tv' : 'movie';
+    const cleanId = String(tmdbId).replace(/^[a-z]+-/, '');
+
+    try {
+      const [resRec, resSim] = await Promise.allSettled([
+        fetchFromTMDB(`${type}/${cleanId}/recommendations`, { language: 'fr-FR' }),
+        fetchFromTMDB(`${type}/${cleanId}/similar`, { language: 'fr-FR' })
+      ]);
+
+      const recs = resRec.status === 'fulfilled' ? (resRec.value?.results || []) : [];
+      const sims = resSim.status === 'fulfilled' ? (resSim.value?.results || []) : [];
+      const combined = [...recs, ...sims]
+        .map(item => formatTMDBMedia(item, type))
+        .filter(Boolean);
+
+      const seen = new Set();
+      return combined.filter(item => {
+        if (!item || !item.id || seen.has(item.id)) return false;
+        seen.add(item.id);
+        return true;
+      });
+    } catch (err) {
+      console.warn(`Info TMDB recommendations (${cleanId}):`, err.message);
+      return [];
+    }
+  },
+
+  /**
+   * Génère des recommandations personnalisées basées sur l'historique et les favoris de l'utilisateur
+   */
+  async getPersonalizedRecommendations(historyList = [], favoritesList = []) {
+    try {
+      const sourceItems = [...(historyList || []), ...(favoritesList || [])];
+      
+      if (sourceItems.length === 0) {
+        // Fallback si l'utilisateur n'a pas encore d'historique : Top pépites et tendances
+        return await this.getTrending('all', 'week');
+      }
+
+      // Prendre les 4 derniers médias consultés ou ajoutés
+      const sampleItems = sourceItems.slice(0, 4);
+      const recPromises = sampleItems.map(item => 
+        this.getMediaRecommendations(item.media_id || item.id, item.type || (item.season_number ? 'tv' : 'movie'))
+      );
+
+      const results = await Promise.allSettled(recPromises);
+      const combined = [];
+      results.forEach(res => {
+        if (res.status === 'fulfilled' && Array.isArray(res.value)) {
+          combined.push(...res.value);
+        }
+      });
+
+      // Si pas assez de résultats, compléter avec des nouveautés populaires
+      if (combined.length < 6) {
+        const topMovies = await this.getPopularMovies(1);
+        combined.push(...topMovies);
+      }
+
+      // Déduplication
+      const seen = new Set(sourceItems.map(i => String(i.media_id || i.id)));
+      return combined.filter(item => {
+        if (!item || !item.id || seen.has(String(item.id))) return false;
+        seen.add(String(item.id));
+        return true;
+      });
+    } catch (err) {
+      console.warn("Info personalized recommendations:", err.message);
+      return await this.getTrending('all', 'week');
     }
   }
 };
