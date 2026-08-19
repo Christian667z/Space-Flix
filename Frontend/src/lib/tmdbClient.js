@@ -10,7 +10,7 @@ const TMDB_BASE_URL = window.SPACE_FLIX_CONFIG?.TMDB_BASE_URL || 'https://api.th
 
 async function fetchFromTMDB(endpoint, params = {}) {
   try {
-    // Essayer d'abord via le proxy backend local /api/tmdb/
+    // Appel sécurisé via le proxy backend Node.js /api/tmdb/
     const queryParams = new URLSearchParams({
       language: 'fr-FR',
       ...params
@@ -23,15 +23,8 @@ async function fetchFromTMDB(endpoint, params = {}) {
       const data = await proxyRes.json();
       return data;
     }
-
-    // Si le proxy local échoue, faire un appel direct avec la clé TMDB configurée
-    const directUrl = `${TMDB_BASE_URL}/${endpoint}?api_key=${TMDB_API_KEY}&language=fr-FR&${queryParams.toString()}`;
-    const directRes = await fetch(directUrl);
-    if (directRes.ok) {
-      return await directRes.json();
-    }
   } catch (err) {
-    console.warn(`[TMDB Client] Erreur lors de la requête vers ${endpoint}:`, err);
+    console.warn(`[TMDB Client] Erreur de communication avec le proxy backend /api/tmdb/${endpoint}:`, err.message);
   }
   return null;
 }

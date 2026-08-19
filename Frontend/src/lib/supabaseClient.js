@@ -1,12 +1,12 @@
 /**
- * Space Flix - Client Supabase et Data Manager
- * Gère la connexion Supabase, l'authentification, les favoris ("Ma Liste"),
- * et la reprise de lecture automatique (Playback Progress / Continue Watching).
+ * Space Flix - Client Data Manager & API Connector
+ * Gère la communication avec le backend Node.js (/api/...), la synchronisation
+ * des favoris ("Ma Liste"), de l'historique ("Reprendre la lecture") et de l'authentification.
  */
 
 import { INITIAL_MEDIA } from './data.js';
 
-// Clés par défaut et stockage de configuration
+// Configuration Supabase & Clés
 const DEFAULT_SUPABASE_URL = 'https://gfjyywtxshebhteaxxtf.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdmanl5d3R4c2hlYmh0ZWF4eHRmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNTc4NjYsImV4cCI6MjEwMjYzMzg2Nn0.G8EwY9CNUA6fW3d8XqKSjM5qhE8-67qgcUsp0BVPHP0';
 
@@ -32,9 +32,19 @@ if (SUPABASE_URL && SUPABASE_ANON_KEY && window.supabase) {
 
 export const supabaseClient = supabase;
 
-// --- GESTION LOCALE (FALLBACK ET UTILISATEURS INVITÉS) ---
+// --- GESTION LOCALE (CACHE ET HORS LIGNE) ---
 const LOCAL_FAVORITES_KEY = 'space_flix_my_list';
 const LOCAL_WATCH_HISTORY_KEY = 'space_flix_continue_watching';
+const LOCAL_AUTH_TOKEN_KEY = 'space_flix_auth_token';
+
+function getAuthHeaders() {
+  const token = localStorage.getItem(LOCAL_AUTH_TOKEN_KEY);
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  return headers;
+}
 
 function getLocalFavorites() {
   try {
@@ -66,6 +76,20 @@ export const SupabaseService = {
   },
 
   async getCurrentUser() {
+    // 1. Vérifier via le backend Node.js
+    try {
+      const res = await fetch('/api/auth/me', { headers: getAuthHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.user && !data.user.isGuest) {
+          return data.user;
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+
+    // 2. Fallback Supabase SDK direct si connecté
     if (supabase) {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -78,24 +102,59 @@ export const SupabaseService = {
   },
 
   async signIn({ email, password }) {
-    if (supabase) {
-      return await supabase.auth.signInWithPassword({ email, password });
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const data = await res.json();
+      if (res.ok && data.token) {
+        localStorage.setItem(LOCAL_AUTH_TOKEN_KEY, data.token);
+        return { data: { user: data.user, session: { access_token: data.token } }, error: null };
+      }
+      return { data: null, error: { message: data.message || 'Identifiants incorrects.' } };
+    } catch (err) {
+      if (supabase) {
+        return await supabase.auth.signInWithPassword({ email, password });
+      }
+      return { data: { user: { email } }, error: null };
     }
-    return { data: { user: { email } }, error: null };
   },
 
   async signUp({ email, password, name }) {
-    if (supabase) {
-      return await supabase.auth.signUp({
-        email,
-        password,
-        options: { data: { full_name: name } }
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, name })
       });
+      const data = await res.json();
+      if (res.ok && data.token) {
+        localStorage.setItem(LOCAL_AUTH_TOKEN_KEY, data.token);
+        return { data: { user: data.user, session: { access_token: data.token } }, error: null };
+      }
+      return { data: null, error: { message: data.message || 'Erreur lors de l\'inscription.' } };
+    } catch (err) {
+      if (supabase) {
+        return await supabase.auth.signUp({
+          email,
+          password,
+          options: { data: { full_name: name } }
+        });
+      }
+      return { data: { user: { email } }, error: null };
     }
-    return { data: { user: { email } }, error: null };
   },
 
   async signOut() {
+    try {
+      await fetch('/api/auth/logout', {
+        method: 'POST',
+        headers: getAuthHeaders()
+      });
+    } catch (e) {}
+    localStorage.removeItem(LOCAL_AUTH_TOKEN_KEY);
     if (supabase) {
       await supabase.auth.signOut();
     }
@@ -121,6 +180,7 @@ export const SupabaseService = {
       title: media?.title || 'Titre',
       type: media?.type || 'movie',
       posterUrl: media?.poster_url || '',
+      backdropUrl: media?.backdrop_url || '',
       seasonNumber: season,
       episodeNumber: episode,
       currentTime: progress_seconds,
@@ -188,86 +248,75 @@ export const SupabaseService = {
     return INITIAL_MEDIA.find(m => String(m.id) === String(id) || m.slug === id) || null;
   },
 
-  // --- GESTION DE "MA LISTE" (FAVORIS) ---
+  // --- GESTION DE "MA LISTE" (FAVORIS) VIA /api/favorites ---
   async getFavorites() {
-    if (supabase) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data, error } = await supabase.from('favorites').select('media_id, media(*)').eq('user_id', user.id);
-          if (!error && data && data.length > 0) {
-            return data.map(item => item.media || INITIAL_MEDIA.find(m => m.id === item.media_id)).filter(Boolean);
-          }
+    // 1. Appel de l'endpoint backend Node.js
+    try {
+      const res = await fetch('/api/favorites', { headers: getAuthHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.favorites && Array.isArray(data.favorites)) {
+          setLocalFavorites(data.favorites);
+          return data.favorites;
         }
-      } catch (e) {
-        console.warn("Favs supabase get:", e.message);
       }
+    } catch (e) {
+      console.warn("Backend get favorites fallback:", e.message);
     }
 
-    // Local fallback
-    const favIds = getLocalFavorites();
-    return INITIAL_MEDIA.filter(m => favIds.includes(m.id));
+    // 2. Fallback local
+    return getLocalFavorites();
   },
 
   async isFavorite(mediaId) {
-    if (supabase) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data } = await supabase.from('favorites').select('id').eq('user_id', user.id).eq('media_id', mediaId).maybeSingle();
-          if (data) return true;
-        }
-      } catch (e) {
-        // local check
-      }
-    }
     const favs = getLocalFavorites();
-    return favs.includes(mediaId);
+    return favs.includes(String(mediaId));
   },
 
   async toggleFavorite(mediaId) {
+    const targetId = String(mediaId);
     let newState = false;
-    // 1. Mise à jour Supabase si connecté
-    if (supabase) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const isFav = await this.isFavorite(mediaId);
-          if (isFav) {
-            await supabase.from('favorites').delete().eq('user_id', user.id).eq('media_id', mediaId);
-            newState = false;
-          } else {
-            await supabase.from('favorites').insert([{ user_id: user.id, media_id: mediaId }]);
-            newState = true;
-          }
-        }
-      } catch (e) {
-        console.warn("Favs toggle supabase:", e.message);
+
+    // 1. Appel du backend Node.js /api/favorites/toggle
+    try {
+      const res = await fetch('/api/favorites/toggle', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({ mediaId: targetId })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        newState = Boolean(data.added);
       }
+    } catch (e) {
+      console.warn("Backend toggle favorites fallback:", e.message);
+      // Fallback calcul local
+      const favs = getLocalFavorites();
+      newState = !favs.includes(targetId);
     }
 
-    // 2. Toujours synchroniser en local pour fluidité maximale
+    // 2. Mise à jour instantanée du cache local
     let favs = getLocalFavorites();
-    if (favs.includes(mediaId)) {
-      favs = favs.filter(id => id !== mediaId);
-      newState = false;
+    if (newState) {
+      if (!favs.includes(targetId)) favs.push(targetId);
     } else {
-      favs.push(mediaId);
-      newState = true;
+      favs = favs.filter(id => id !== targetId);
     }
     setLocalFavorites(favs);
+
     return newState;
   },
 
-  // --- REPRISE DE LECTURE AUTOMATIQUE (PLAYBACK PROGRESS & CONTINUE WATCHING) ---
+  // --- REPRISE DE LECTURE AUTOMATIQUE (PLAYBACK PROGRESS & CONTINUE WATCHING) VIA /api/history ---
   /**
-   * Sauvegarde la position exacte de lecture (currentTime, duration, etc.) dans Supabase et LocalStorage
+   * Sauvegarde la position exacte de lecture (currentTime, duration, etc.) dans l'API Node.js et LocalStorage
    */
   async savePlaybackProgress({
     mediaId,
     title,
     type = 'movie',
     posterUrl = '',
+    backdropUrl = '',
     seasonNumber = 1,
     episodeNumber = 1,
     episodeTitle = '',
@@ -284,6 +333,7 @@ export const SupabaseService = {
       media_title: title,
       media_type: type,
       poster_url: posterUrl,
+      backdrop_url: backdropUrl,
       season_number: seasonNumber,
       episode_number: episodeNumber,
       episode_title: episodeTitle,
@@ -294,29 +344,35 @@ export const SupabaseService = {
       updated_at: new Date().toISOString()
     };
 
-    // 1. Sauvegarde dans Supabase si l'utilisateur est connecté
-    if (supabase) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('user_history').upsert({
-            user_id: user.id,
-            ...progressRecord
-          }, {
-            onConflict: 'user_id,media_id,season_number,episode_number'
-          });
-        }
-      } catch (err) {
-        console.warn("Info sauvegarde progression Supabase:", err.message);
-      }
+    // 1. Envoi au backend Node.js /api/history
+    try {
+      fetch('/api/history', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          media: {
+            id: String(mediaId),
+            title,
+            poster_url: posterUrl,
+            backdrop_url: backdropUrl,
+            type
+          },
+          season: seasonNumber,
+          episode: episodeNumber,
+          progress_seconds: Math.round(currentTime),
+          duration_seconds: Math.round(duration),
+          completed: isCompleted
+        })
+      }).catch(() => {});
+    } catch (err) {
+      // non bloquant
     }
 
-    // 2. Sauvegarde dans le stockage local (toujours actif pour les invités ou hors ligne)
+    // 2. Sauvegarde dans le stockage local pour fluidité immédiate
     let history = getLocalHistory();
     history = history.filter(item => !(item.media_id === String(mediaId) && item.season_number === seasonNumber && item.episode_number === episodeNumber));
     history.unshift(progressRecord);
-    // Garder les 20 plus récents
-    if (history.length > 20) history = history.slice(0, 20);
+    if (history.length > 25) history = history.slice(0, 25);
     setLocalHistory(history);
   },
 
@@ -325,28 +381,6 @@ export const SupabaseService = {
    */
   async getPlaybackProgress(mediaId, seasonNumber = 1, episodeNumber = 1) {
     if (!mediaId) return null;
-
-    if (supabase) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data, error } = await supabase
-            .from('user_history')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('media_id', String(mediaId))
-            .eq('season_number', seasonNumber)
-            .eq('episode_number', episodeNumber)
-            .maybeSingle();
-
-          if (!error && data && data.current_time_seconds > 5 && !data.completed) {
-            return data;
-          }
-        }
-      } catch (e) {
-        // local check fallback
-      }
-    }
 
     const history = getLocalHistory();
     const item = history.find(h => h.media_id === String(mediaId) && h.season_number === seasonNumber && h.episode_number === episodeNumber);
@@ -360,29 +394,33 @@ export const SupabaseService = {
    * Récupère la liste complète des contenus en cours de visionnage pour le carousel "Reprendre la lecture"
    */
   async getAllContinueWatching() {
-    if (supabase) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          const { data, error } = await supabase
-            .from('user_history')
-            .select('*')
-            .eq('user_id', user.id)
-            .eq('completed', false)
-            .gt('current_time_seconds', 5)
-            .order('updated_at', { ascending: false })
-            .limit(10);
-
-          if (!error && Array.isArray(data) && data.length > 0) {
-            return data;
-          }
+    // 1. Appel du backend Node.js /api/history
+    try {
+      const res = await fetch('/api/history', { headers: getAuthHeaders() });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.history && Array.isArray(data.history) && data.history.length > 0) {
+          const formatted = data.history.map(item => ({
+            media_id: item.mediaId || item.media?.id,
+            media_title: item.media?.title || 'Titre',
+            media_type: item.media?.type || 'movie',
+            poster_url: item.media?.poster_url || '',
+            backdrop_url: item.media?.backdrop_url || '',
+            season_number: item.season || 1,
+            episode_number: item.episode || 1,
+            current_time_seconds: item.progressSeconds || 0,
+            duration_seconds: item.durationSeconds || 0,
+            progress_percent: item.progressPercent || 0,
+            completed: Boolean(item.completed)
+          }));
+          return formatted.filter(h => !h.completed && (h.current_time_seconds > 5 || h.progress_percent > 2));
         }
-      } catch (e) {
-        console.warn("Continue watching supabase:", e.message);
       }
+    } catch (e) {
+      console.warn("Backend get history fallback:", e.message);
     }
 
-    // Fallback local
+    // 2. Fallback local
     const history = getLocalHistory();
     return history.filter(h => !h.completed && h.current_time_seconds > 5);
   },
@@ -391,24 +429,41 @@ export const SupabaseService = {
    * Supprime un titre de l'historique
    */
   async removePlaybackProgress(mediaId, seasonNumber = 1, episodeNumber = 1) {
-    if (supabase) {
-      try {
-        const { data: { user } } = await supabase.auth.getUser();
-        if (user) {
-          await supabase.from('user_history')
-            .delete()
-            .eq('user_id', user.id)
-            .eq('media_id', String(mediaId))
-            .eq('season_number', seasonNumber)
-            .eq('episode_number', episodeNumber);
-        }
-      } catch (e) {
-        // ignore
-      }
-    }
+    try {
+      fetch(`/api/history/${mediaId}?season=${seasonNumber}&episode=${episodeNumber}`, {
+        method: 'DELETE',
+        headers: getAuthHeaders()
+      }).catch(() => {});
+    } catch (e) {}
 
     let history = getLocalHistory();
     history = history.filter(h => !(h.media_id === String(mediaId) && h.season_number === seasonNumber && h.episode_number === episodeNumber));
     setLocalHistory(history);
+  },
+
+  /**
+   * Signale un flux vidéo cassé vers /api/report
+   */
+  async reportBrokenStream({ tmdb_id, media_title, server_name, server_index, error_type, details }) {
+    try {
+      const res = await fetch('/api/report', {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          tmdb_id,
+          media_title,
+          server_name,
+          server_index,
+          error_type,
+          details
+        })
+      });
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (e) {
+      console.warn("Rapport de flux erreur:", e);
+    }
+    return { success: false, recommendedServerIndex: (Number(server_index || 0) + 1) % 5 };
   }
 };

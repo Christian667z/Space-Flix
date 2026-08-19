@@ -121,8 +121,33 @@ async function loadLiveTMDBData() {
     });
     STATE.allMediaList = Array.from(uniqueMap.values());
 
+    // Récupération de la reprise de lecture depuis l'API backend /api/history
+    const continueWatching = await SupabaseService.getAllContinueWatching();
+    const continueItems = (continueWatching || []).map(cw => {
+      const match = STATE.allMediaList.find(m => m.id === cw.media_id || m.tmdb_id === Number(cw.media_id));
+      if (match) return match;
+      return {
+        id: cw.media_id,
+        tmdb_id: cw.media_id,
+        title: cw.media_title || 'Titre',
+        poster_url: cw.poster_url || 'https://images.unsplash.com/photo-1536440136628-849c177e76a1?w=500&auto=format&fit=crop&q=80',
+        type: cw.media_type || 'movie',
+        rating: '8.0',
+        release_year: 2026,
+        genres: ['Reprendre']
+      };
+    });
+
     // Mettre à jour les catégories dynamiques
     const dynamicCats = [];
+
+    if (continueItems.length > 0) {
+      dynamicCats.push({
+        id: 'continue-watching',
+        name: 'Reprendre la lecture (Enregistré)',
+        items: continueItems.slice(0, 10)
+      });
+    }
 
     if (liveTrending.length > 0) {
       dynamicCats.push({
