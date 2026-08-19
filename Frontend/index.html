@@ -25,7 +25,28 @@
       // Modèles acceptés : {tmdb_id}, {season}, {episode}
       // Exemple de forme (sans domaine pré-rempli) :
       // { name: 'Mon fournisseur', movie: 'https://.../movie/{tmdb_id}', tv: 'https://.../tv/{tmdb_id}/{season}/{episode}' }
-      AUTHORIZED_EMBED_PROVIDERS: []
+      AUTHORIZED_EMBED_PROVIDERS: [
+        {
+          name: 'Serveur 1 - VidLink Pro (Super Rapide)',
+          movie: 'https://vidlink.pro/movie/{tmdb_id}?primaryColor=ff0000',
+          tv: 'https://vidlink.pro/tv/{tmdb_id}/{season}/{episode}?primaryColor=ff0000'
+        },
+        {
+          name: 'Serveur 2 - VidSrc CC',
+          movie: 'https://vidsrc.cc/v2/embed/movie/{tmdb_id}?autoPlay=false',
+          tv: 'https://vidsrc.cc/v2/embed/tv/{tmdb_id}/{season}/{episode}'
+        },
+        {
+          name: 'Serveur 3 - AutoEmbed CC',
+          movie: 'https://player.autoembed.cc/embed/movie/{tmdb_id}',
+          tv: 'https://player.autoembed.cc/embed/tv/{tmdb_id}/{season}/{episode}'
+        },
+        {
+          name: 'Serveur 4 - SuperEmbed',
+          movie: 'https://multiembed.mov/?video_id={tmdb_id}&tmdb=1',
+          tv: 'https://multiembed.mov/?video_id={tmdb_id}&tmdb=1&s={season}&e={episode}'
+        }
+      ]
     };
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>

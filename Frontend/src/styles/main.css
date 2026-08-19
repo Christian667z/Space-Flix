@@ -5569,6 +5569,409 @@ body {
   transform: translateX(0);
 }
 
+/* ==========================================================================
+   CORRECTION LECTEUR VIDÉO (SCROLLBARS, 16:9, DOUBLE BARRE & BADGES PARASITES)
+   ========================================================================== */
+
+/* 1. Conteneur du lecteur & Aspect Ratio 16:9 parfait sans déformer */
+.player-wrapper-handy {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  background-color: #000000;
+  border-radius: 14px;
+  overflow: hidden !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.9);
+}
+
+.video-container {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9; /* Garantit le format vidéo 16:9 parfait */
+  background-color: #000000;
+  overflow: hidden !important;
+}
+
+/* Fixation absolue de l'iframe et suppression des barres de défilement parasite */
+.video-iframe,
+#video-iframe,
+#player-iframe {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: 0 !important;
+  outline: none !important;
+  overflow: hidden !important;
+  scrolling: no;
+}
+
+/* 2. Masquage de la double barre de contrôle personnalisée pour éviter les conflits d'interface */
+.handy-player-controls-bar {
+  display: none !important;
+}
+
+/* 3. Blocage et masquage des éléments parasites externes (Badge Histats, pub tiers) */
+a[href*="histats"],
+img[src*="histats"],
+div[id*="histats"],
+#histatsC,
+.histats {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* ==========================================================================
+   CORRECTION COMPLETE LECTURE, CARTES NOUVEAUTÉS ET BOUTON FERMER (X)
+   ========================================================================== */
+
+/* 1. Finition Section Reprendre la lecture (Barre de progression, Bouton Play & Bouton X discret) */
+.continue-watching-grid {
+  display: flex !important;
+  gap: 20px !important;
+  overflow-x: auto !important;
+  overflow-y: visible !important;
+  padding: 10px 2px 24px 2px !important;
+  width: 100% !important;
+}
+
+.continue-card {
+  flex: 0 0 280px !important;
+  width: 280px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  position: relative !important;
+  cursor: pointer !important;
+  background: #0f1019 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 18px !important;
+  padding: 10px !important;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease !important;
+  box-sizing: border-box !important;
+}
+
+.continue-card:hover {
+  transform: translateY(-5px) !important;
+  border-color: #E50914 !important;
+  background: #141522 !important;
+  box-shadow: 0 0 22px rgba(229, 9, 20, 0.45), 0 12px 30px rgba(0, 0, 0, 0.8) !important;
+}
+
+.continue-poster-wrap {
+  position: relative !important;
+  width: 100% !important;
+  aspect-ratio: 16 / 9 !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  background: #000000 !important;
+  margin-bottom: 10px !important;
+}
+
+.continue-poster-img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 14px !important;
+  transition: transform 0.35s ease !important;
+}
+
+.continue-card:hover .continue-poster-img {
+  transform: scale(1.05) !important;
+}
+
+/* Overlay Bouton Play au survol de la miniature */
+.continue-play-overlay {
+  position: absolute !important;
+  inset: 0 !important;
+  background: rgba(0, 0, 0, 0.45) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  opacity: 0 !important;
+  transition: opacity 0.25s ease !important;
+  border: none !important;
+  cursor: pointer !important;
+  color: #ffffff !important;
+  font-size: 1.4rem !important;
+}
+
+.continue-card:hover .continue-play-overlay {
+  opacity: 1 !important;
+}
+
+.continue-play-overlay i {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #E50914;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 3px;
+  box-shadow: 0 4px 20px rgba(229, 9, 20, 0.6);
+}
+
+/* Barre de progression vidéo (Rouge Netflix) */
+.continue-progress-bar-wrap {
+  position: absolute !important;
+  bottom: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  height: 4px !important;
+  background: rgba(255, 255, 255, 0.25) !important;
+  z-index: 5 !important;
+}
+
+.continue-progress-bar-fill {
+  height: 100% !important;
+  background: #E50914 !important;
+  box-shadow: 0 0 8px rgba(229, 9, 20, 0.8) !important;
+}
+
+/* Bouton de suppression X ultra propre dans le coin supérieur droit */
+.continue-remove-btn,
+.card-remove-btn,
+.continue-watching-remove,
+.remove-card-btn,
+.btn-remove-continue {
+  position: absolute !important;
+  top: 8px !important;
+  right: 8px !important;
+  width: 28px !important;
+  height: 28px !important;
+  background: rgba(0, 0, 0, 0.65) !important;
+  background-color: rgba(0, 0, 0, 0.65) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border-radius: 50% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #ffffff !important;
+  font-size: 0.8rem !important;
+  border: 1px solid rgba(255, 255, 255, 0.25) !important;
+  cursor: pointer !important;
+  z-index: 15 !important;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6) !important;
+}
+
+.continue-remove-btn:hover,
+.card-remove-btn:hover,
+.continue-watching-remove:hover,
+.remove-card-btn:hover,
+.btn-remove-continue:hover {
+  background: #E50914 !important;
+  background-color: #E50914 !important;
+  border-color: #E50914 !important;
+  transform: scale(1.12) !important;
+  color: #ffffff !important;
+}
+
+/* Titres & métadonnées de reprise */
+.continue-details {
+  padding: 2px 4px 4px 4px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.continue-title {
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin: 0 !important;
+}
+
+.continue-time-tag {
+  font-size: 0.8rem !important;
+  color: #a0a0a0 !important;
+  font-weight: 600 !important;
+}
+
+/* 3. Grilles et Cartes du Catalogue (Finition exacte selon la capture d'écran) */
+.handy-media-grid,
+.movies-grid,
+.media-grid,
+.carousel-container,
+.section-content,
+#latest-grid,
+#trending-grid,
+#movies-grid,
+#tv-grid,
+#favorites-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(175px, 1fr)) !important;
+  gap: 20px !important;
+  height: auto !important;
+  min-height: min-content !important;
+  max-height: none !important;
+  overflow-y: visible !important;
+  overflow-x: visible !important;
+  padding: 10px 2px 32px 2px !important;
+}
+
+/* Carte avec conteneur sombre arrondi (exactement comme la capture) */
+.handy-media-card,
+.media-card {
+  display: flex !important;
+  flex-direction: column !important;
+  background: #0f1019 !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  border-radius: 18px !important;
+  padding: 10px !important;
+  cursor: pointer !important;
+  position: relative !important;
+  transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease !important;
+  height: auto !important;
+  box-sizing: border-box !important;
+}
+
+/* Effet de survol / Carte active (Bordure néon rouge comme Spider-Man sur la capture) */
+.handy-media-card:hover,
+.media-card:hover {
+  transform: translateY(-6px) !important;
+  border-color: #E50914 !important;
+  background: #141522 !important;
+  box-shadow: 0 0 22px rgba(229, 9, 20, 0.45), 0 12px 30px rgba(0, 0, 0, 0.8) !important;
+}
+
+/* Conteneur de l'affiche */
+.handy-poster-wrap,
+.card-poster-wrapper {
+  position: relative !important;
+  width: 100% !important;
+  aspect-ratio: 2 / 3 !important;
+  border-radius: 14px !important;
+  overflow: hidden !important;
+  background: #000000 !important;
+  margin-bottom: 10px !important;
+}
+
+.handy-poster,
+.card-poster {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover !important;
+  border-radius: 14px !important;
+  transition: transform 0.35s ease !important;
+}
+
+.handy-media-card:hover .handy-poster,
+.media-card:hover .card-poster {
+  transform: scale(1.05) !important;
+}
+
+/* Infos sous l'affiche (Titre + Année + Note + Badge) */
+.handy-card-details {
+  padding: 2px 4px 4px 4px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px !important;
+}
+
+.handy-card-title {
+  font-size: 0.95rem !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  margin: 0 !important;
+}
+
+.handy-card-sub {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 0.8rem !important;
+  color: #a0a0a0 !important;
+  font-weight: 600 !important;
+}
+
+/* Étoile de note en jaune (exactement comme sur la capture) */
+.handy-star {
+  color: #ffffff !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  font-weight: 700 !important;
+}
+
+.handy-star i {
+  color: #fbbf24 !important; /* Jaune doré de la capture */
+}
+
+/* Badge de type (FILM / SÉRIE) à droite */
+.handy-type {
+  background: rgba(229, 9, 20, 0.2) !important;
+  color: #ff3344 !important;
+  font-size: 0.68rem !important;
+  font-weight: 900 !important;
+  padding: 2px 7px !important;
+  border-radius: 4px !important;
+  letter-spacing: 0.06em !important;
+  text-transform: uppercase !important;
+  margin-left: auto !important;
+}
+
+/* ==========================================================================
+   CORRECTION DE FORMAT ET ESPACEMENT DES EN-TÊTES DE SECTION (REPRENDRE LA LECTURE)
+   ========================================================================== */
+
+.section {
+  padding: 1.2rem 5% !important;
+}
+
+#continue-watching-section {
+  padding: 0.8rem 5% 0.4rem 5% !important;
+  margin-bottom: 0 !important;
+}
+
+.section-header-handy {
+  display: flex !important;
+  align-items: flex-end !important;
+  justify-content: space-between !important;
+  margin-bottom: 12px !important;
+}
+
+.section-subtitle-tag {
+  color: #ff3344 !important;
+  font-size: 0.75rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.12em !important;
+  text-transform: uppercase !important;
+  margin-bottom: 4px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
+.section-title-handy {
+  font-family: var(--font-heading) !important;
+  font-size: 1.6rem !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  letter-spacing: -0.02em !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+  border: none !important;
+}
+
 
 
 

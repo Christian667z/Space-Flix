@@ -741,6 +741,16 @@ function renderMediaGrid(containerEl, list) {
       if (!media) {
         media = await SupabaseService.getMediaById(mediaId);
       }
+      if (!media && mediaId) {
+        const cleanId = String(mediaId).replace(/^[a-z]+-/, '');
+        const isMovie = mediaId.startsWith('movie-') || !mediaId.startsWith('tv-');
+        try {
+          const detail = isMovie ? await TMDBService.getMovieDetails(cleanId) : await TMDBService.getTVShowDetails(cleanId);
+          if (detail) media = formatTMDBMedia(detail, isMovie ? 'movie' : 'tv');
+        } catch (e) {
+          console.warn("Erreur chargement détails TMDB card click:", e);
+        }
+      }
       if (media) {
         openPlayerModal(media);
       }
@@ -962,7 +972,7 @@ export function showToast(message) {
 }
 
 function startPlaybackNow() {
-  const handyHero = document.getElementById('handy-details-hero');
+  const handyHero = document.getElementById('handy-details-hero') || document.getElementById('handy-details-hero-section');
   const handyPlayerWrap = document.getElementById('player-wrapper-handy');
   const similarSection = document.getElementById('similar-media-section');
   const loader = document.getElementById('player-loading-overlay');
@@ -1060,7 +1070,7 @@ export async function openPlayerModal(media, seasonNumber = 1, episodeNumber = 1
   if (DOM.modalSynopsis) DOM.modalSynopsis.textContent = media.synopsis || 'Aucun synopsis disponible.';
 
   // Affichage initial : Hero visible, Player caché
-  const handyHero = document.getElementById('handy-details-hero');
+  const handyHero = document.getElementById('handy-details-hero') || document.getElementById('handy-details-hero-section');
   const handyPlayerWrap = document.getElementById('player-wrapper-handy');
   if (handyHero) handyHero.style.display = 'block';
   if (DOM.similarMediaSection) DOM.similarMediaSection.classList.remove('hidden');
@@ -1105,7 +1115,10 @@ export async function openPlayerModal(media, seasonNumber = 1, episodeNumber = 1
     startPlaybackNow();
   }
 
-  DOM.playerModal.classList.add('active');
+  if (DOM.playerModal) {
+    DOM.playerModal.classList.remove('hidden');
+    DOM.playerModal.classList.add('active');
+  }
   document.body.style.overflow = 'hidden';
 }
 
@@ -1169,28 +1182,50 @@ function renderSimilarMedia(activeMedia) {
   });
 }
 
+// Fonction pour générer l'URL finale nettoyée avec remplacement dynamique de {tmdb_id}, {season}, {episode}
+export function buildEmbedUrl(templateUrl, tmdbId, season = 1, episode = 1) {
+  if (!templateUrl) return '';
+  const cleanTmdbId = String(tmdbId || '').replace(/^[a-z]+-/, '');
+  const s = Math.max(1, Number(season) || 1);
+  const e = Math.max(1, Number(episode) || 1);
+
+  return String(templateUrl)
+    .replace(/\{tmdb_id\}/g, cleanTmdbId)
+    .replace(/\{season\}/g, s)
+    .replace(/\{episode\}/g, e);
+}
+
 function getConfiguredServers(media, season = 1, episode = 1) {
   if (!media) return [];
 
-  if (media.type === 'movie') {
-    const configured = Array.isArray(media.video_servers)
-      ? media.video_servers.filter(server => server?.url)
-      : [];
-    return configured.length > 0 ? configured : generateDefaultServers(media, season, episode);
+  const tmdbId = media.tmdb_id || String(media.id || '').replace(/^[a-z]+-/, '');
+  const defaultServers = generateDefaultServers(media, season, episode);
+
+  if (defaultServers && defaultServers.length > 0) {
+    return defaultServers;
   }
 
-  const nestedEpisode = media.seasons
-    ?.find(item => Number(item.season_number) === Number(season))
-    ?.episodes
-    ?.find(item => Number(item.episode_number) === Number(episode));
-  const flatEpisode = media.episodes
-    ?.find(item => Number(item.season_number) === Number(season) && Number(item.episode_number) === Number(episode));
-  const episodeData = nestedEpisode || flatEpisode;
+  let rawServers = [];
+  if (media.type === 'movie') {
+    rawServers = Array.isArray(media.video_servers) ? media.video_servers : [];
+  } else {
+    const nestedEpisode = media.seasons
+      ?.find(item => Number(item.season_number) === Number(season))
+      ?.episodes
+      ?.find(item => Number(item.episode_number) === Number(episode));
+    const flatEpisode = media.episodes
+      ?.find(item => Number(item.season_number) === Number(season) && Number(item.episode_number) === Number(episode));
+    const episodeData = nestedEpisode || flatEpisode;
+    rawServers = Array.isArray(episodeData?.video_servers) ? episodeData.video_servers : [];
+  }
 
-  const configured = Array.isArray(episodeData?.video_servers)
-    ? episodeData.video_servers.filter(server => server?.url)
-    : [];
-  return configured.length > 0 ? configured : generateDefaultServers(media, season, episode);
+  return rawServers.map(srv => {
+    if (!srv || !srv.url) return null;
+    return {
+      ...srv,
+      url: buildEmbedUrl(srv.url, tmdbId, season, episode)
+    };
+  }).filter(Boolean);
 }
 
 function generateDefaultServers(media, season = 1, episode = 1) {
@@ -1200,18 +1235,13 @@ function generateDefaultServers(media, season = 1, episode = 1) {
   const tmdbId = media.tmdb_id || String(media.id || '').replace(/^[a-z]+-/, '');
   if (!tmdbId) return [];
 
-  const values = {
-    tmdb_id: encodeURIComponent(String(tmdbId)),
-    season: encodeURIComponent(String(Math.max(1, Number(season) || 1))),
-    episode: encodeURIComponent(String(Math.max(1, Number(episode) || 1)))
-  };
   const templateKey = media.type === 'movie' ? 'movie' : 'tv';
 
   return providers.map((provider, index) => {
     const template = provider?.[templateKey];
     if (!template || !/^https:\/\//i.test(template)) return null;
 
-    const url = String(template).replace(/\{(tmdb_id|season|episode)\}/g, (_, key) => values[key]);
+    const url = buildEmbedUrl(template, tmdbId, season, episode);
     return {
       name: provider.name || `Serveur ${index + 1}`,
       url,
@@ -1262,6 +1292,8 @@ function loadTrailerVideo() {
 function loadVideoIframe(url) {
   if (DOM.playerErrorOverlay) DOM.playerErrorOverlay.classList.add('hidden');
   if (!DOM.videoIframe || !url) return;
+
+  console.log('🚀 [SpaceFlix] Embed URL injected into iframe:', url);
 
   const loader = document.getElementById('player-loading-overlay');
   if (loader) loader.classList.remove('hidden');
@@ -1882,7 +1914,7 @@ function setupEventListeners() {
   const btnBackHandy = DOM.closePlayerBtn;
   btnBackHandy?.addEventListener('click', () => {
     const handyPlayerWrap = document.getElementById('player-wrapper-handy');
-    const handyHero = document.getElementById('handy-details-hero');
+    const handyHero = document.getElementById('handy-details-hero') || document.getElementById('handy-details-hero-section');
     const similarSection = document.getElementById('similar-media-section');
 
     if (handyPlayerWrap && !handyPlayerWrap.classList.contains('hidden')) {

@@ -365,6 +365,22 @@ export const TMDBService = {
   },
 
   /**
+   * Récupère les détails d'un film
+   */
+  async getMovieDetails(tmdbId) {
+    if (!tmdbId) return null;
+    const cleanId = String(tmdbId).replace(/^[a-z]+-/, '');
+    try {
+      const res = await fetch(`${TMDB_BASE_URL}/movie/${cleanId}?api_key=${TMDB_API_KEY}&language=fr-FR`, { headers });
+      if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
+      return await res.json();
+    } catch (err) {
+      console.warn(`Info Movie Details (${cleanId}):`, err.message);
+      return null;
+    }
+  },
+
+  /**
    * Récupère les détails d'une série TV (nombre de saisons, épisodes)
    */
   async getTVShowDetails(tmdbId) {
