@@ -66,6 +66,43 @@ export const TMDB = {
     return INITIAL_MEDIA.filter(m => m.release_year >= 2024);
   },
 
+  // Obtenir les mieux notés
+  async getTopRated(mediaType = 'movie', page = 1) {
+    const data = await fetchFromTMDB(`${mediaType}/top_rated`, { page });
+    if (data && data.results && data.results.length > 0) {
+      return data.results.map(item => formatTMDBItem({ ...item, media_type: mediaType }));
+    }
+    return [];
+  },
+
+  // Flux de découverte paginé infini
+  async getDiscoverFeed(page = 1, mediaType = 'all') {
+    if (mediaType === 'tv') {
+      const data = await fetchFromTMDB('discover/tv', { page, sort_by: 'popularity.desc', 'vote_count.gte': 50 });
+      if (data && data.results) return data.results.map(i => formatTMDBItem({ ...i, media_type: 'tv' }));
+    } else if (mediaType === 'movie') {
+      const data = await fetchFromTMDB('discover/movie', { page, sort_by: 'popularity.desc', 'vote_count.gte': 50 });
+      if (data && data.results) return data.results.map(i => formatTMDBItem({ ...i, media_type: 'movie' }));
+    } else {
+      // Mix films et séries
+      const [movies, tv] = await Promise.allSettled([
+        fetchFromTMDB('discover/movie', { page, sort_by: 'popularity.desc', 'vote_count.gte': 40 }),
+        fetchFromTMDB('discover/tv', { page, sort_by: 'popularity.desc', 'vote_count.gte': 40 })
+      ]);
+      const mList = movies.status === 'fulfilled' && movies.value?.results ? movies.value.results.map(i => formatTMDBItem({ ...i, media_type: 'movie' })) : [];
+      const tList = tv.status === 'fulfilled' && tv.value?.results ? tv.value.results.map(i => formatTMDBItem({ ...i, media_type: 'tv' })) : [];
+      
+      const mixed = [];
+      const maxLen = Math.max(mList.length, tList.length);
+      for (let i = 0; i < maxLen; i++) {
+        if (mList[i]) mixed.push(mList[i]);
+        if (tList[i]) mixed.push(tList[i]);
+      }
+      return mixed;
+    }
+    return [];
+  },
+
   // Obtenir les séries diffusées récemment
   async getOnTheAirTV(page = 1) {
     const data = await fetchFromTMDB('tv/on_the_air', { page });

@@ -97,31 +97,77 @@ async function initSplashScreen() {
 /**
  * Charge dynamiquement les flux TMDB en temps réel (Tendances, Populaires, Séries, Sorties)
  */
+/**
+ * Charge dynamiquement les flux TMDB en temps réel avec un catalogue complet et étendu
+ */
 async function loadLiveTMDBData() {
   try {
-    const [trending, popMovies, popTV, nowPlaying] = await Promise.allSettled([
+    const [
+      trendingDay,
+      trendingWeek,
+      popMoviesP1,
+      popMoviesP2,
+      popTvP1,
+      popTvP2,
+      nowPlayingP1,
+      nowPlayingP2,
+      topRatedMovies,
+      topRatedTV,
+      actionMovies,
+      sciFiMovies,
+      thrillerMovies,
+      animMovies
+    ] = await Promise.allSettled([
       TMDB.getTrending('day'),
+      TMDB.getTrending('week'),
       TMDB.getPopularMovies(1),
+      TMDB.getPopularMovies(2),
       TMDB.getPopularTV(1),
-      TMDB.getNowPlayingMovies(1)
+      TMDB.getPopularTV(2),
+      TMDB.getNowPlayingMovies(1),
+      TMDB.getNowPlayingMovies(2),
+      TMDB.getTopRated('movie', 1),
+      TMDB.getTopRated('tv', 1),
+      TMDB.discoverByGenre('28,12', 'movie', 1),
+      TMDB.discoverByGenre('878,14', 'movie', 1),
+      TMDB.discoverByGenre('53,80', 'movie', 1),
+      TMDB.discoverByGenre('16,35', 'movie', 1)
     ]);
 
-    const liveTrending = trending.status === 'fulfilled' && trending.value?.length ? trending.value : [];
-    const liveMovies = popMovies.status === 'fulfilled' && popMovies.value?.length ? popMovies.value : [];
-    const liveTV = popTV.status === 'fulfilled' && popTV.value?.length ? popTV.value : [];
-    const liveNowPlaying = nowPlaying.status === 'fulfilled' && nowPlaying.value?.length ? nowPlaying.value : [];
+    const getVal = (res) => (res.status === 'fulfilled' && Array.isArray(res.value) ? res.value : []);
 
-    // Fusionner dans la liste globale
-    const allFetched = [...liveTrending, ...liveMovies, ...liveTV, ...liveNowPlaying];
+    const liveTrending = [...getVal(trendingDay), ...getVal(trendingWeek)];
+    const liveMovies = [...getVal(popMoviesP1), ...getVal(popMoviesP2)];
+    const liveTV = [...getVal(popTvP1), ...getVal(popTvP2)];
+    const liveNowPlaying = [...getVal(nowPlayingP1), ...getVal(nowPlayingP2)];
+    const liveTopRated = [...getVal(topRatedMovies), ...getVal(topRatedTV)];
+    const liveAction = getVal(actionMovies);
+    const liveSciFi = getVal(sciFiMovies);
+    const liveThriller = getVal(thrillerMovies);
+    const liveAnim = getVal(animMovies);
+
+    // Dédoublonnage pour fusionner dans la liste globale
+    const allFetched = [
+      ...liveTrending,
+      ...liveMovies,
+      ...liveTV,
+      ...liveNowPlaying,
+      ...liveTopRated,
+      ...liveAction,
+      ...liveSciFi,
+      ...liveThriller,
+      ...liveAnim
+    ];
+
     const uniqueMap = new Map();
     [...allFetched, ...INITIAL_MEDIA].forEach(item => {
-      if (!uniqueMap.has(item.id)) {
+      if (item && item.id && !uniqueMap.has(item.id)) {
         uniqueMap.set(item.id, item);
       }
     });
     STATE.allMediaList = Array.from(uniqueMap.values());
 
-    // Récupération de la reprise de lecture depuis l'API backend /api/history
+    // Récupération de la reprise de lecture depuis l'API backend
     const continueWatching = await SupabaseService.getAllContinueWatching();
     const continueItems = (continueWatching || []).map(cw => {
       const match = STATE.allMediaList.find(m => m.id === cw.media_id || m.tmdb_id === Number(cw.media_id));
@@ -138,22 +184,22 @@ async function loadLiveTMDBData() {
       };
     });
 
-    // Mettre à jour les catégories dynamiques
+    // Mettre à jour les catégories dynamiques avec un volume généreux de titres (25 à 40 par rangée)
     const dynamicCats = [];
 
     if (continueItems.length > 0) {
       dynamicCats.push({
         id: 'continue-watching',
         name: 'Reprendre la lecture (Enregistré)',
-        items: continueItems.slice(0, 10)
+        items: continueItems
       });
     }
 
     if (liveTrending.length > 0) {
       dynamicCats.push({
         id: 'trending-now',
-        name: 'Tendances du Jour (En Direct TMDB)',
-        items: liveTrending.slice(0, 12)
+        name: 'Tendances du Moment (En Direct TMDB)',
+        items: liveTrending.slice(0, 36)
       });
     }
 
@@ -161,7 +207,7 @@ async function loadLiveTMDBData() {
       dynamicCats.push({
         id: 'now-playing',
         name: 'Nouveautés & Sorties Récentes HD',
-        items: liveNowPlaying.slice(0, 12)
+        items: liveNowPlaying.slice(0, 36)
       });
     }
 
@@ -169,30 +215,73 @@ async function loadLiveTMDBData() {
       dynamicCats.push({
         id: 'popular-tv',
         name: 'Séries TV Populaires en Streaming',
-        items: liveTV.slice(0, 12)
+        items: liveTV.slice(0, 36)
       });
     }
 
     if (liveMovies.length > 0) {
       dynamicCats.push({
         id: 'popular-movies',
-        name: 'Films Incontournables & Mieux Notés',
-        items: liveMovies.slice(0, 12)
+        name: 'Films Incontournables & Populaires',
+        items: liveMovies.slice(0, 36)
       });
     }
 
-    // Si des catégories ont été récupérées, mettre à jour l'affichage
+    if (liveTopRated.length > 0) {
+      dynamicCats.push({
+        id: 'top-rated',
+        name: 'Les Mieux Notés de Tous les Temps ⭐',
+        items: liveTopRated.slice(0, 36)
+      });
+    }
+
+    if (liveAction.length > 0) {
+      dynamicCats.push({
+        id: 'genre-action',
+        name: 'Action & Aventure Sensationnelle',
+        items: liveAction.slice(0, 30)
+      });
+    }
+
+    if (liveSciFi.length > 0) {
+      dynamicCats.push({
+        id: 'genre-scifi',
+        name: 'Science-Fiction & Mondes Fantastiques',
+        items: liveSciFi.slice(0, 30)
+      });
+    }
+
+    if (liveThriller.length > 0) {
+      dynamicCats.push({
+        id: 'genre-thriller',
+        name: 'Thrillers, Suspense & Policier',
+        items: liveThriller.slice(0, 30)
+      });
+    }
+
+    if (liveAnim.length > 0) {
+      dynamicCats.push({
+        id: 'genre-anim',
+        name: 'Animation & Comédies Populaires',
+        items: liveAnim.slice(0, 30)
+      });
+    }
+
+    // Affichage des catégories enrichies
     if (dynamicCats.length > 0) {
       STATE.dynamicCategories = dynamicCats;
       renderAllCategoryRows(STATE.dynamicCategories);
     }
 
-    // Mettre à jour le Hero Spotlight avec les 5 meilleurs films en tendance
+    // Initialiser le flux infini continu
+    initInfiniteCatalog();
+
+    // Mettre à jour le Hero Spotlight avec les meilleurs films en tendance
     if (liveTrending.length >= 3) {
-      setupHeroSpotlight(liveTrending.slice(0, 5));
+      setupHeroSpotlight(liveTrending.slice(0, 6));
     }
   } catch (err) {
-    console.warn('[HANDYFLIX] Synchronisation TMDB automatique en arrière-plan:', err);
+    console.warn('[SPACEFLIX] Synchronisation TMDB automatique en arrière-plan:', err);
   }
 }
 
@@ -311,10 +400,10 @@ function renderHeroThumbnails(items) {
 function getCategoryIconSVG(catId) {
   if (catId.includes('trending')) {
     // Fire / Trending Flame SVG
-    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff4b55" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(255,75,85,0.5));"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`;
+    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff8c1a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(255,75,85,0.5));"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`;
   } else if (catId.includes('now') || catId.includes('movie')) {
     // Film Clapper / Cinema Reel SVG
-    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(56,189,248,0.5));"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>`;
+    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff7a00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(255,122,0,0.5));"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>`;
   } else if (catId.includes('tv') || catId.includes('serie')) {
     // TV Monitor Screen SVG
     return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(168,85,247,0.5));"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>`;
@@ -323,10 +412,10 @@ function getCategoryIconSVG(catId) {
     return `<svg width="20" height="20" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(251,191,36,0.5));"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
   } else if (catId.includes('list') || catId.includes('fav')) {
     // Bookmark / List SVG
-    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="#38bdf8" stroke="#38bdf8" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(56,189,248,0.5));"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;
+    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="#ff7a00" stroke="#ff7a00" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(255,122,0,0.5));"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;
   }
   // Default Play Stream SVG
-  return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+  return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff7a00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
 }
 
 function renderAllCategoryRows(categories) {
@@ -386,14 +475,14 @@ export function getFallbackPoster(title = 'Film HD') {
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750" viewBox="0 0 500 750">
     <defs>
       <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#090a12"/>
-        <stop offset="60%" stop-color="#151624"/>
-        <stop offset="100%" stop-color="#0284c7"/>
+        <stop offset="0%" stop-color="#0f0f0f"/>
+        <stop offset="60%" stop-color="#141414"/>
+        <stop offset="100%" stop-color="#ff7a00"/>
       </linearGradient>
     </defs>
     <rect width="500" height="750" fill="url(#bg)"/>
-    <circle cx="250" cy="320" r="60" fill="rgba(56,189,248,0.12)" stroke="#38bdf8" stroke-width="2"/>
-    <polygon points="242,295 272,320 242,345" fill="#38bdf8"/>
+    <circle cx="250" cy="320" r="60" fill="rgba(255,122,0,0.12)" stroke="#ff7a00" stroke-width="2"/>
+    <polygon points="242,295 272,320 242,345" fill="#ff7a00"/>
     <text x="250" y="440" fill="#ffffff" font-family="sans-serif" font-size="24" font-weight="bold" text-anchor="middle">${safe}</text>
     <text x="250" y="480" fill="#94a3b8" font-family="sans-serif" font-size="16" text-anchor="middle">STREAMING HD</text>
   </svg>`;
@@ -419,7 +508,7 @@ function createPosterCardHTML(item) {
   return `
     <div class="pro-card" data-id="${item.id}" id="card-${item.id}">
       <div class="pro-poster-wrapper">
-        <img src="${item.poster_url}" alt="${item.title}" class="pro-poster-img" loading="lazy">
+        <img src="${item.poster_url}" alt="${item.title}" class="pro-poster-img" loading="lazy" decoding="async">
         <span class="pro-card-badge">${typeBadge}</span>
         <span class="pro-card-quality">1080P</span>
         <span class="pro-card-rating"><i class="fa-solid fa-star"></i> ${rating}</span>
@@ -429,6 +518,144 @@ function createPosterCardHTML(item) {
       </div>
     </div>
   `;
+}
+
+// =========================================================================
+// 3B. CATALOGUE CONTINU & DÉCOUVERTE INFINIE (INFINITE SCROLL ULTRA-FLUIDE)
+// =========================================================================
+
+let infiniteCatalogState = {
+  page: 1,
+  filter: 'all',
+  loading: false,
+  hasMore: true,
+  items: []
+};
+
+async function initInfiniteCatalog() {
+  const grid = document.getElementById('infinite-grid');
+  const sentinel = document.getElementById('infinite-sentinel');
+  const spinner = document.getElementById('infinite-spinner');
+  const loadMoreBtn = document.getElementById('btn-load-more-infinite');
+  const filterBtns = document.querySelectorAll('.inf-filter-btn');
+
+  if (!grid) return;
+
+  // Réinitialiser l'état
+  infiniteCatalogState.page = 1;
+  infiniteCatalogState.loading = false;
+  infiniteCatalogState.hasMore = true;
+  infiniteCatalogState.items = [];
+  grid.innerHTML = '';
+
+  // Configuration des boutons de filtres (Tous, Films, Séries TV)
+  filterBtns.forEach(btn => {
+    btn.onclick = () => {
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      infiniteCatalogState.filter = btn.dataset.filter || 'all';
+      infiniteCatalogState.page = 1;
+      infiniteCatalogState.hasMore = true;
+      grid.innerHTML = '';
+      loadNextInfinitePage();
+    };
+  });
+
+  // Bouton de secours "Charger Plus"
+  if (loadMoreBtn) {
+    loadMoreBtn.onclick = () => {
+      loadNextInfinitePage();
+    };
+  }
+
+  // Fonction de chargement de page TMDB suivante ultra-optimisée
+  async function loadNextInfinitePage() {
+    if (infiniteCatalogState.loading || !infiniteCatalogState.hasMore) return;
+    infiniteCatalogState.loading = true;
+
+    if (spinner) spinner.classList.add('loading');
+    if (loadMoreBtn) loadMoreBtn.style.display = 'none';
+
+    try {
+      const pageToFetch = infiniteCatalogState.page;
+      const filterToFetch = infiniteCatalogState.filter;
+      const newItems = await TMDB.getDiscoverFeed(pageToFetch, filterToFetch);
+
+      if (newItems && newItems.length > 0) {
+        // Filtrer les doublons déjà présents
+        const existingIds = new Set(infiniteCatalogState.items.map(i => i.id));
+        const filteredNew = newItems.filter(i => !existingIds.has(i.id));
+
+        if (filteredNew.length > 0) {
+          const fragment = document.createDocumentFragment();
+
+          filteredNew.forEach(item => {
+            infiniteCatalogState.items.push(item);
+            if (!STATE.allMediaList.some(m => m.id === item.id)) {
+              STATE.allMediaList.push(item);
+            }
+
+            const cardWrapper = document.createElement('div');
+            cardWrapper.innerHTML = createPosterCardHTML(item);
+            const cardEl = cardWrapper.firstElementChild;
+            if (cardEl) {
+              cardEl.addEventListener('click', () => openStreamModal(item));
+              fragment.appendChild(cardEl);
+            }
+          });
+
+          // Insertion atomique via DocumentFragment & requestAnimationFrame pour 60/120fps constant
+          window.requestAnimationFrame(() => {
+            grid.appendChild(fragment);
+          });
+        }
+
+        infiniteCatalogState.page += 1;
+      } else {
+        if (infiniteCatalogState.page > 1) {
+          infiniteCatalogState.hasMore = false;
+        }
+      }
+    } catch (err) {
+      console.warn('Erreur lors du défilement infini du catalogue:', err);
+    } finally {
+      infiniteCatalogState.loading = false;
+      if (spinner) spinner.classList.remove('loading');
+      if (loadMoreBtn && infiniteCatalogState.hasMore) loadMoreBtn.style.display = 'inline-flex';
+    }
+  }
+
+  // Chargement de la première page
+  await loadNextInfinitePage();
+
+  // IntersectionObserver pour déclenchement fluide et automatique au défilement (sans bloquer le thread principal)
+  if (sentinel && 'IntersectionObserver' in window) {
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      if (entry && entry.isIntersecting && !infiniteCatalogState.loading && infiniteCatalogState.hasMore) {
+        loadNextInfinitePage();
+      }
+    }, {
+      rootMargin: '300px 0px 300px 0px',
+      threshold: 0.05
+    });
+
+    observer.observe(sentinel);
+  }
+
+  // Fallback écouteur de scroll passif et debouncé
+  let scrollTimeout = null;
+  window.addEventListener('scroll', () => {
+    if (scrollTimeout) return;
+    scrollTimeout = setTimeout(() => {
+      scrollTimeout = null;
+      const scrollPos = window.innerHeight + window.scrollY;
+      const threshold = document.documentElement.scrollHeight - 500;
+      if (scrollPos >= threshold && !infiniteCatalogState.loading && infiniteCatalogState.hasMore) {
+        loadNextInfinitePage();
+      }
+    }, 150);
+  }, { passive: true });
 }
 
 // =========================================================================
@@ -664,11 +891,11 @@ async function openStreamModal(media, season = 1, episode = 1) {
   }
 
   if (yearBadge) {
-    yearBadge.innerHTML = `<i class="fa-regular fa-calendar" style="color: #38bdf8; margin-right: 5px;"></i> ${media.release_year || '2026'}`;
+    yearBadge.innerHTML = `<i class="fa-regular fa-calendar" style="color: #ff7a00; margin-right: 5px;"></i> ${media.release_year || '2026'}`;
   }
 
   if (durationBadge) {
-    durationBadge.innerHTML = `<i class="fa-regular fa-clock" style="color: #38bdf8; margin-right: 5px;"></i> ${media.duration || (media.type === 'tv' ? '8 Saisons' : '1h 51m')}`;
+    durationBadge.innerHTML = `<i class="fa-regular fa-clock" style="color: #ff7a00; margin-right: 5px;"></i> ${media.duration || (media.type === 'tv' ? '8 Saisons' : '1h 51m')}`;
   }
 
   if (qualityBadge) {
@@ -1004,7 +1231,7 @@ async function renderFavoritesView() {
 
   container.innerHTML = `
     <div style="padding: 3rem 1rem; text-align: center; color: #94a3b8;">
-      <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: #38bdf8; margin-bottom: 1rem;"></i>
+      <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: #ff7a00; margin-bottom: 1rem;"></i>
       <p style="font-size: 1rem;">Chargement de vos favoris synchronisés...</p>
     </div>
   `;
@@ -1018,8 +1245,8 @@ async function renderFavoritesView() {
     if (favIds.length === 0) {
       container.innerHTML = `
         <section class="category-row" style="padding: 2.5rem 0;">
-          <div style="background: rgba(15, 17, 26, 0.7); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 16px; padding: 4rem 2rem; text-align: center; max-width: 680px; margin: 0 auto;">
-            <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(56, 189, 248, 0.12); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 2rem; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">
+          <div style="background: rgba(18, 18, 18, 0.7); border: 1px dashed rgba(255, 122, 0, 0.25); border-radius: 16px; padding: 4rem 2rem; text-align: center; max-width: 680px; margin: 0 auto;">
+            <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(255, 122, 0, 0.12); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 2rem; color: #ff7a00; border: 1px solid rgba(255, 122, 0, 0.3);">
               <i class="fa-regular fa-bookmark"></i>
             </div>
             <h3 style="font-size: 1.5rem; font-weight: 800; color: #ffffff; margin-bottom: 0.75rem; font-family: 'Plus Jakarta Sans', sans-serif;">Votre liste est vide</h3>
@@ -1114,25 +1341,38 @@ function setupNavigation() {
       STATE.currentNav = nav;
 
       const heroSection = document.getElementById('hero-spotlight-section');
+      const infiniteSection = document.getElementById('infinite-catalog-section');
 
       if (nav === 'home' || nav === 'all') {
         if (heroSection) heroSection.style.display = 'flex';
+        if (infiniteSection) infiniteSection.style.display = 'block';
         renderAllCategoryRows(STATE.dynamicCategories);
+        const allBtn = document.querySelector('.inf-filter-btn[data-filter="all"]');
+        if (allBtn) allBtn.click();
       } else if (nav === 'trending') {
         if (heroSection) heroSection.style.display = 'flex';
-        const trendingRow = STATE.dynamicCategories.filter(c => c.id === 'trending-now');
-        renderAllCategoryRows(trendingRow.length ? trendingRow : STATE.dynamicCategories);
+        if (infiniteSection) infiniteSection.style.display = 'block';
+        const trendingRows = STATE.dynamicCategories.filter(c => c.id === 'trending-now' || c.id === 'top-rated');
+        renderAllCategoryRows(trendingRows.length ? trendingRows : STATE.dynamicCategories);
       } else if (nav === 'tv') {
         if (heroSection) heroSection.style.display = 'flex';
-        const tvItems = STATE.allMediaList.filter(i => i.type === 'tv');
-        const tvCategory = [{
-          id: 'tv-all',
-          name: 'Toutes les Séries TV en Streaming HD',
-          items: tvItems.length > 0 ? tvItems : STATE.allMediaList.filter(i => i.type === 'tv')
-        }];
-        renderAllCategoryRows(tvCategory);
+        if (infiniteSection) infiniteSection.style.display = 'block';
+        const tvRows = STATE.dynamicCategories.filter(c => c.id === 'popular-tv' || c.id.includes('tv'));
+        if (tvRows.length > 0) {
+          renderAllCategoryRows(tvRows);
+        } else {
+          const tvItems = STATE.allMediaList.filter(i => i.type === 'tv');
+          renderAllCategoryRows([{
+            id: 'tv-all',
+            name: 'Toutes les Séries TV en Streaming HD',
+            items: tvItems
+          }]);
+        }
+        const tvBtn = document.querySelector('.inf-filter-btn[data-filter="tv"]');
+        if (tvBtn) tvBtn.click();
       } else if (nav === 'favorites') {
         if (heroSection) heroSection.style.display = 'none';
+        if (infiniteSection) infiniteSection.style.display = 'none';
         renderFavoritesView();
       }
     });
@@ -1163,9 +1403,9 @@ function showToast(message) {
 
   const toast = document.createElement('div');
   toast.style.cssText = `
-    background: rgba(10, 11, 18, 0.95);
-    border: 1px solid rgba(56, 189, 248, 0.3);
-    border-left: 4px solid #38bdf8;
+    background: rgba(12, 12, 12, 0.95);
+    border: 1px solid rgba(255, 122, 0, 0.3);
+    border-left: 4px solid #ff7a00;
     color: #ffffff;
     padding: 0.85rem 1.25rem;
     border-radius: 8px;
@@ -1182,7 +1422,7 @@ function showToast(message) {
     pointer-events: auto;
   `;
 
-  toast.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#38bdf8;"></i> <span>${message}</span>`;
+  toast.innerHTML = `<i class="fa-solid fa-circle-check" style="color:#ff7a00;"></i> <span>${message}</span>`;
   container.appendChild(toast);
 
   setTimeout(() => {

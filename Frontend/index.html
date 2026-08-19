@@ -163,15 +163,15 @@
        1. SPLASH SCREEN ANIMÉ (HANDYFLIX WATCH WITHOUT LIMITS)
        ======================================================== -->
   <div class="splash-root" id="app-splash-screen" aria-live="polite" aria-label="Loading HANDYFLIX">
-    <div style="position: absolute; inset: 0; background: #04040a;"></div>
+    <div style="position: absolute; inset: 0; background: #050505;"></div>
     <div style="position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; max-width: 320px; width: 100%; padding: 0 1.5rem; text-align: center;">
       
       <!-- LOGO ICON -->
       <div style="position: relative; margin-bottom: 1.25rem;">
-        <div class="splash-orbit" style="position: absolute; left: 50%; top: 50%; width: 140px; height: 140px; border-radius: 50%; border: 1px dashed rgba(56, 189, 248, 0.4);">
-          <span style="position: absolute; top: -4px; left: 50%; width: 8px; height: 8px; transform: translateX(-50%); border-radius: 50%; background: #38bdf8; box-shadow: 0 0 12px #38bdf8;"></span>
+        <div class="splash-orbit" style="position: absolute; left: 50%; top: 50%; width: 140px; height: 140px; border-radius: 50%; border: 1px dashed rgba(255, 122, 0, 0.4);">
+          <span style="position: absolute; top: -4px; left: 50%; width: 8px; height: 8px; transform: translateX(-50%); border-radius: 50%; background: #ff7a00; box-shadow: 0 0 12px #ff7a00;"></span>
         </div>
-        <img src="img/handyflix_cinema_bg.png" alt="Logo HANDYFLIX" class="splash-brand-logo" style="height: 64px; width: auto; max-width: 170px; object-fit: contain; filter: drop-shadow(0 8px 30px rgba(56,189,248,0.5));" onerror="this.onerror=null; this.src='img/handyflix_cinema_bg.png';">
+        <img src="img/handyflix_cinema_bg.png" alt="Logo HANDYFLIX" class="splash-brand-logo" style="height: 64px; width: auto; max-width: 170px; object-fit: contain; filter: drop-shadow(0 8px 30px rgba(255,122,0,0.5));" onerror="this.onerror=null; this.src='img/handyflix_cinema_bg.png';">
       </div>
 
       <!-- TITLE LETTERS -->
@@ -191,7 +191,7 @@
       <!-- PROGRESS BAR -->
       <div style="width: 100%; max-width: 220px; background: rgba(255,255,255,0.06); border-radius: 9999px; padding: 3px; border: 1px solid rgba(255,255,255,0.08);">
         <div style="height: 3px; border-radius: 9999px; background: rgba(255,255,255,0.05); position: relative; overflow: hidden;">
-          <div id="splash-progress-fill" style="position: absolute; inset-y: 0; left: 0; width: 0%; background: linear-gradient(90deg, #0284c7, #38bdf8); box-shadow: 0 0 16px #38bdf8; transition: width 0.35s ease;"></div>
+          <div id="splash-progress-fill" style="position: absolute; inset-y: 0; left: 0; width: 0%; background: linear-gradient(90deg, #ff7a00, #ff7a00); box-shadow: 0 0 16px #ff7a00; transition: width 0.35s ease;"></div>
           <div class="splash-bar-shimmer" style="position: absolute; inset: 0;"></div>
         </div>
       </div>
@@ -325,7 +325,7 @@
   <div class="drawer-backdrop hidden" id="notifications-drawer">
     <div class="drawer-card">
       <div class="drawer-header">
-        <h3><i class="fa-regular fa-bell" style="color: #38bdf8; margin-right: 8px;"></i> Notifications</h3>
+        <h3><i class="fa-regular fa-bell" style="color: #ff7a00; margin-right: 8px;"></i> Notifications</h3>
         <button class="drawer-close-btn" id="close-notif-btn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="drawer-content">
@@ -338,7 +338,7 @@
           </div>
         </div>
         <div class="notif-item">
-          <div class="notif-badge" style="background:#0284c7;">SERIE</div>
+          <div class="notif-badge" style="background:#ff7a00;">SERIE</div>
           <div class="notif-info">
             <h4>Reacher Saison 3 ajoutée</h4>
             <p>Alan Ritchson revient pour une nouvelle mission explosive.</p>
@@ -363,7 +363,7 @@
   <div class="drawer-backdrop hidden" id="downloads-drawer">
     <div class="drawer-card">
       <div class="drawer-header">
-        <h3><i class="fa-solid fa-download" style="color: #38bdf8; margin-right: 8px;"></i> Téléchargements & Hors-Ligne</h3>
+        <h3><i class="fa-solid fa-download" style="color: #ff7a00; margin-right: 8px;"></i> Téléchargements & Hors-Ligne</h3>
         <button class="drawer-close-btn" id="close-download-btn"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="drawer-content">
@@ -396,7 +396,7 @@
     <div class="category-header">
       <div class="category-title-wrap">
         <h2 class="category-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(56,189,248,0.5));"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Reprendre la Lecture
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff7a00" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(255,122,0,0.5));"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Reprendre la Lecture
         </h2>
         <div class="category-accent-bar"></div>
       </div>
@@ -412,6 +412,41 @@
   <main class="pro-main-content" id="main-catalog-container">
     <!-- Injected by JavaScript -->
   </main>
+
+  <!-- ========================================================
+       6B. INFINITE DISCOVERY FEED (CONTINUOUS SCROLL)
+       ======================================================== -->
+  <section class="infinite-catalog-section" id="infinite-catalog-section" style="max-width: 1400px; margin: 0 auto; padding: 2rem 3rem 4rem 3rem; width: 100%;">
+    <div class="infinite-header">
+      <div class="category-title-wrap">
+        <h2 class="category-title" style="display: flex; align-items: center; gap: 0.6rem; font-size: 1.5rem; font-weight: 800; color: #fff;">
+          <i class="fa-solid fa-film" style="color: #ff7a00;"></i>
+          <span>Explorer Tout le Catalogue HD</span>
+        </h2>
+        <div class="category-accent-bar" style="background: #ff7a00; width: 45px; height: 3px; border-radius: 999px; margin-top: 4px;"></div>
+      </div>
+      <div class="infinite-filters">
+        <button class="inf-filter-btn active" data-filter="all">Tous</button>
+        <button class="inf-filter-btn" data-filter="movie">Films</button>
+        <button class="inf-filter-btn" data-filter="tv">Séries TV</button>
+      </div>
+    </div>
+
+    <div class="infinite-grid" id="infinite-grid">
+      <!-- Dynamically filled with infinite scroll items -->
+    </div>
+
+    <div class="infinite-sentinel" id="infinite-sentinel">
+      <div class="infinite-spinner-indicator" id="infinite-spinner">
+        <i class="fa-solid fa-circle-notch fa-spin" style="font-size: 1.3rem;"></i>
+        <span>Chargement automatique de nouveaux films et séries...</span>
+      </div>
+      <button class="infinite-load-more-btn" id="btn-load-more-infinite">
+        <i class="fa-solid fa-plus"></i>
+        <span>Charger Plus de Titres</span>
+      </button>
+    </div>
+  </section>
 
   <!-- ========================================================
        7. FAQ SECTION (ACCORDION)
@@ -523,8 +558,8 @@
             <!-- META PILLS ROW -->
             <div class="movie-meta-pills-row">
               <span class="meta-pill rating" id="stream-badge-rating"><i class="fa-solid fa-star" style="color: #fbbf24;"></i> 8.4</span>
-              <span class="meta-pill" id="stream-badge-year"><i class="fa-regular fa-calendar" style="color: #38bdf8; margin-right: 4px;"></i> 2026</span>
-              <span class="meta-pill" id="stream-badge-duration"><i class="fa-regular fa-clock" style="color: #38bdf8; margin-right: 4px;"></i> 1h 51m</span>
+              <span class="meta-pill" id="stream-badge-year"><i class="fa-regular fa-calendar" style="color: #ff7a00; margin-right: 4px;"></i> 2026</span>
+              <span class="meta-pill" id="stream-badge-duration"><i class="fa-regular fa-clock" style="color: #ff7a00; margin-right: 4px;"></i> 1h 51m</span>
               <span class="meta-pill quality" id="stream-badge-type">1080p</span>
             </div>
 
@@ -588,7 +623,7 @@
         <!-- AUDIO DUBBING OPTIONS -->
         <div class="stream-dubbing-box">
           <div class="dubbing-header">
-            <span><i class="fa-solid fa-language" style="color:#38bdf8; margin-right:6px;"></i> Langues & Doublages disponibles :</span>
+            <span><i class="fa-solid fa-language" style="color:#ff7a00; margin-right:6px;"></i> Langues & Doublages disponibles :</span>
             <span class="dubbing-badge">VF DÉFAUT</span>
           </div>
           <div class="dubbing-tags">
@@ -603,7 +638,7 @@
         <div id="stream-series-wrapper" class="stream-episodes-wrap" style="display: none;">
           <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.85rem;">
             <h4 style="font-size: 0.98rem; font-weight: 700; color: #fff;">Saisons & Épisodes :</h4>
-            <select id="stream-season-select" style="background: #151624; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 8px; font-size: 0.85rem; outline: none;"></select>
+            <select id="stream-season-select" style="background: #141414; color: #fff; border: 1px solid rgba(255,255,255,0.15); padding: 5px 12px; border-radius: 8px; font-size: 0.85rem; outline: none;"></select>
           </div>
           <div class="episodes-grid" id="stream-episodes-grid"></div>
         </div>
