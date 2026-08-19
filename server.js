@@ -15,9 +15,22 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware pour parser JSON et URL-encoded
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// Middleware de sécurité et CORS
+app.use((req, res, next) => {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-User-Id');
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
+// Middleware pour parser JSON et URL-encoded avec limites de taille
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 // =========================================================================
 // 1. SYSTÈME DE CACHE MÉMOIRE HAUTE PERFORMANCE (TTL & LRU)
@@ -90,6 +103,13 @@ function loadDatabase() {
           DB.users.set(u.email, u);
         }
       }
+      if (Array.isArray(data.sessions)) {
+        for (const [token, user] of data.sessions) {
+          // Relier à l'objet utilisateur frais de DB.users
+          const freshUser = DB.users.get(user.email) || user;
+          DB.sessions.set(token, freshUser);
+        }
+      }
       if (Array.isArray(data.history)) {
         for (const [userId, hist] of data.history) {
           DB.history.set(userId, hist);
@@ -103,7 +123,7 @@ function loadDatabase() {
       if (Array.isArray(data.reports)) {
         DB.reports = data.reports;
       }
-      console.log('[DB] Base de données locale chargée avec succès.');
+      console.log('[DB] Base de données et sessions locales chargées avec succès.');
     }
   } catch (err) {
     console.warn('[DB] Impossible de charger la base locale, utilisation de la mémoire:', err.message);
@@ -121,6 +141,7 @@ function persistDatabase() {
       }
       const serializable = {
         users: Array.from(DB.users.values()),
+        sessions: Array.from(DB.sessions.entries()),
         history: Array.from(DB.history.entries()),
         favorites: Array.from(DB.favorites.entries()).map(([k, set]) => [k, Array.from(set)]),
         reports: DB.reports.slice(0, 100)
@@ -133,6 +154,33 @@ function persistDatabase() {
 }
 
 loadDatabase();
+
+// Rate limiter simple en mémoire pour les routes sensibles d'authentification
+const RATE_LIMIT_STORE = new Map();
+function rateLimit(windowMs = 15 * 60 * 1000, maxRequests = 30) {
+  return (req, res, next) => {
+    const ip = req.ip || req.headers['x-forwarded-for'] || 'client-ip';
+    const now = Date.now();
+    const clientRecord = RATE_LIMIT_STORE.get(ip) || { count: 0, resetAt: now + windowMs };
+
+    if (now > clientRecord.resetAt) {
+      clientRecord.count = 1;
+      clientRecord.resetAt = now + windowMs;
+    } else {
+      clientRecord.count += 1;
+    }
+
+    RATE_LIMIT_STORE.set(ip, clientRecord);
+
+    if (clientRecord.count > maxRequests) {
+      return res.status(429).json({
+        error: 'Trop de requêtes. Veuillez patienter avant de réessayer.',
+        retryAfterSeconds: Math.ceil((clientRecord.resetAt - now) / 1000)
+      });
+    }
+    next();
+  };
+}
 
 // Helper pour récupérer l'ID utilisateur de façon sécurisée
 const DEFAULT_USER_ID = 'guest-user-default';
@@ -155,11 +203,18 @@ function resolveUserId(req) {
 }
 
 // =========================================================================
-// 3. PROXY TMDB AVEC CACHE INTELLIGENT & GESTION D'ERREURS
+// 3. PROXY TMDB AVEC CACHE INTELLIGENT & SÉCURISATION
 // =========================================================================
 app.get('/api/tmdb/*', async (req, res) => {
   try {
-    const tmdbPath = req.params[0] || '';
+    const rawPath = req.params[0] || '';
+    // Sécurité: interdire la traversée de répertoire et nettoyer le chemin
+    const tmdbPath = rawPath.replace(/\.\./g, '').replace(/^\/+/, '');
+    
+    if (!tmdbPath) {
+      return res.status(400).json({ error: 'Chemin TMDB manquant.' });
+    }
+
     const apiKey = process.env.TMDB_API_KEY || '99b995150ed16f5fc8a3fff320ca41df';
     
     // Clé unique pour le cache basée sur le chemin et les query params
@@ -188,14 +243,14 @@ app.get('/api/tmdb/*', async (req, res) => {
     const response = await fetch(url.toString(), {
       headers: {
         'Accept': 'application/json',
-        'User-Agent': 'HANDYFLIX-Node/2.5'
+        'User-Agent': 'SPACEFLIX-Node/3.0'
       }
     });
 
     const contentType = response.headers.get('content-type') || '';
     if (!contentType.includes('application/json')) {
-      return res.status(response.status).json({
-        error: 'TMDB returned a non-JSON response',
+      return res.status(response.status >= 400 ? response.status : 502).json({
+        error: 'TMDB a retourné une réponse non-JSON',
         status: response.status
       });
     }
@@ -220,7 +275,21 @@ app.get('/api/tmdb/*', async (req, res) => {
   }
 });
 
-// Endpoint d'état du cache
+// Endpoint d'état du cache et de santé
+app.get('/api/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'SpaceFlix API',
+    uptimeSeconds: Math.round(process.uptime()),
+    timestamp: new Date().toISOString(),
+    database: {
+      usersCount: DB.users.size,
+      activeSessions: DB.sessions.size,
+      reportsCount: DB.reports.length
+    }
+  });
+});
+
 app.get('/api/cache/stats', (req, res) => {
   res.json({
     totalEntries: CACHE_STORE.size,
@@ -233,8 +302,8 @@ app.get('/api/cache/stats', (req, res) => {
 // 4. API AUTHENTIFICATION & PROFILS SÉCURISÉE (/api/auth/*)
 // =========================================================================
 
-// Inscription sécurisée avec hachage bcrypt
-app.post('/api/auth/register', (req, res) => {
+// Inscription sécurisée avec hachage bcrypt et limitation de débit
+app.post('/api/auth/register', rateLimit(15 * 60 * 1000, 10), (req, res) => {
   const { email, password, name } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Email et mot de passe requis.' });
@@ -269,11 +338,11 @@ app.post('/api/auth/register', (req, res) => {
   DB.users.set(cleanEmail, newUser);
   DB.history.set(userId, []);
   DB.favorites.set(userId, new Set());
-  persistDatabase();
 
   // Créer un token de session cryptographiquement sécurisé
   const token = `tok_${crypto.randomBytes(32).toString('hex')}`;
   DB.sessions.set(token, newUser);
+  persistDatabase();
 
   // Ne pas renvoyer le hash du mot de passe
   const { passwordHash: _, ...safeUser } = newUser;
@@ -285,8 +354,8 @@ app.post('/api/auth/register', (req, res) => {
   });
 });
 
-// Connexion sécurisée avec vérification de mot de passe
-app.post('/api/auth/login', (req, res) => {
+// Connexion sécurisée avec vérification de mot de passe et limitation de débit
+app.post('/api/auth/login', rateLimit(15 * 60 * 1000, 20), (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ error: 'Veuillez saisir votre email et votre mot de passe.' });
@@ -307,6 +376,7 @@ app.post('/api/auth/login', (req, res) => {
 
   const token = `tok_${crypto.randomBytes(32).toString('hex')}`;
   DB.sessions.set(token, user);
+  persistDatabase();
 
   const { passwordHash: _, ...safeUser } = user;
 
@@ -338,12 +408,65 @@ app.get('/api/auth/me', (req, res) => {
   });
 });
 
+// Mise à jour du profil utilisateur
+app.put('/api/auth/profile', (req, res) => {
+  const user = resolveUser(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Authentification requise.' });
+  }
+
+  const { name, avatar } = req.body;
+  if (name && typeof name === 'string') {
+    user.name = name.trim().slice(0, 50);
+  }
+  if (avatar && typeof avatar === 'string') {
+    user.avatar = avatar.trim().slice(0, 500);
+  }
+  user.updatedAt = new Date().toISOString();
+
+  DB.users.set(user.email, user);
+  persistDatabase();
+
+  const { passwordHash: _, ...safeUser } = user;
+  res.json({ success: true, message: 'Profil mis à jour.', user: safeUser });
+});
+
+// Changement de mot de passe sécurisé
+app.put('/api/auth/password', (req, res) => {
+  const user = resolveUser(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Authentification requise.' });
+  }
+
+  const { currentPassword, newPassword } = req.body;
+  if (!currentPassword || !newPassword) {
+    return res.status(400).json({ error: 'Mot de passe actuel et nouveau mot de passe requis.' });
+  }
+
+  if (typeof newPassword !== 'string' || newPassword.length < 6) {
+    return res.status(400).json({ error: 'Le nouveau mot de passe doit comporter au moins 6 caractères.' });
+  }
+
+  const isCurrentValid = user.passwordHash ? bcrypt.compareSync(currentPassword, user.passwordHash) : false;
+  if (!isCurrentValid) {
+    return res.status(401).json({ error: 'Mot de passe actuel incorrect.' });
+  }
+
+  user.passwordHash = bcrypt.hashSync(newPassword, 10);
+  user.updatedAt = new Date().toISOString();
+  DB.users.set(user.email, user);
+  persistDatabase();
+
+  res.json({ success: true, message: 'Mot de passe modifié avec succès.' });
+});
+
 // Déconnexion
 app.post('/api/auth/logout', (req, res) => {
   const authHeader = req.headers.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     const token = authHeader.substring(7).trim();
     DB.sessions.delete(token);
+    persistDatabase();
   }
   res.json({ message: 'Déconnexion effectuée.' });
 });
@@ -558,7 +681,18 @@ app.get('/download-zip', handleZipDownload);
 app.get('/api/download-zip', handleZipDownload);
 
 // =========================================================================
-// 9. FICHIERS STATIQUES & ROUTES HTML
+// 9. GESTION DES ROUTES API INCONNUES (Évite de renvoyer le HTML index.html en 404 JSON)
+// =========================================================================
+app.all('/api/*', (req, res) => {
+  res.status(404).json({
+    error: 'Endpoint API introuvable',
+    method: req.method,
+    path: req.originalUrl
+  });
+});
+
+// =========================================================================
+// 10. FICHIERS STATIQUES & ROUTES HTML
 // =========================================================================
 app.use(express.static(path.join(__dirname, 'Frontend')));
 
@@ -581,6 +715,18 @@ app.get(['/terms', '/terms.html', '/conditions', '/conditions.html'], (req, res)
 // Fallback navigation SPA
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'Frontend', 'index.html'));
+});
+
+// Global Error Handler Middleware
+app.use((err, req, res, next) => {
+  console.error('[UNHANDLED ERROR]', err);
+  if (res.headersSent) {
+    return next(err);
+  }
+  if (req.path.startsWith('/api/')) {
+    return res.status(500).json({ error: 'Erreur interne du serveur', message: err.message });
+  }
+  res.status(500).send('Erreur interne du serveur');
 });
 
 app.listen(PORT, '0.0.0.0', () => {
