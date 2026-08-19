@@ -127,7 +127,7 @@ async function loadLiveTMDBData() {
     if (liveTrending.length > 0) {
       dynamicCats.push({
         id: 'trending-now',
-        name: '🔥 Tendances du Jour (En Direct TMDB)',
+        name: 'Tendances du Jour (En Direct TMDB)',
         items: liveTrending.slice(0, 12)
       });
     }
@@ -135,7 +135,7 @@ async function loadLiveTMDBData() {
     if (liveNowPlaying.length > 0) {
       dynamicCats.push({
         id: 'now-playing',
-        name: '🎬 Nouveautés & Sorties Récentes HD',
+        name: 'Nouveautés & Sorties Récentes HD',
         items: liveNowPlaying.slice(0, 12)
       });
     }
@@ -143,7 +143,7 @@ async function loadLiveTMDBData() {
     if (liveTV.length > 0) {
       dynamicCats.push({
         id: 'popular-tv',
-        name: '📺 Séries TV Populaires en Streaming',
+        name: 'Séries TV Populaires en Streaming',
         items: liveTV.slice(0, 12)
       });
     }
@@ -151,7 +151,7 @@ async function loadLiveTMDBData() {
     if (liveMovies.length > 0) {
       dynamicCats.push({
         id: 'popular-movies',
-        name: '⭐ Films Incontournables & Mieux Notés',
+        name: 'Films Incontournables & Mieux Notés',
         items: liveMovies.slice(0, 12)
       });
     }
@@ -280,8 +280,29 @@ function renderHeroThumbnails(items) {
 }
 
 // =========================================================================
-// 3. RENDU DES CATÉGORIES (CARROUSELS HORIZONTAUX)
+// 3. RENDU DES CATÉGORIES (CARROUSELS HORIZONTAUX AVEC ICÔNES SVG)
 // =========================================================================
+
+function getCategoryIconSVG(catId) {
+  if (catId.includes('trending')) {
+    // Fire / Trending Flame SVG
+    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ff4b55" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(255,75,85,0.5));"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>`;
+  } else if (catId.includes('now') || catId.includes('movie')) {
+    // Film Clapper / Cinema Reel SVG
+    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(56,189,248,0.5));"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>`;
+  } else if (catId.includes('tv') || catId.includes('serie')) {
+    // TV Monitor Screen SVG
+    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#a855f7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(168,85,247,0.5));"><rect x="2" y="7" width="20" height="15" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/></svg>`;
+  } else if (catId.includes('popular') || catId.includes('top')) {
+    // Star Rating SVG
+    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="#fbbf24" stroke="#fbbf24" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(251,191,36,0.5));"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+  } else if (catId.includes('list') || catId.includes('fav')) {
+    // Bookmark / List SVG
+    return `<svg width="20" height="20" viewBox="0 0 24 24" fill="#38bdf8" stroke="#38bdf8" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(56,189,248,0.5));"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>`;
+  }
+  // Default Play Stream SVG
+  return `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>`;
+}
 
 function renderAllCategoryRows(categories) {
   const container = document.getElementById('main-catalog-container');
@@ -291,7 +312,7 @@ function renderAllCategoryRows(categories) {
     <section class="category-row" id="row-${cat.id}">
       <div class="category-header">
         <div class="category-title-wrap">
-          <h2 class="category-title">${cat.name}</h2>
+          <h2 class="category-title">${getCategoryIconSVG(cat.id)}${cat.name}</h2>
           <div class="category-accent-bar"></div>
         </div>
         <div class="carousel-nav-arrows">
@@ -618,11 +639,11 @@ async function openStreamModal(media, season = 1, episode = 1) {
   }
 
   if (yearBadge) {
-    yearBadge.textContent = `📅 ${media.release_year || '2026'}`;
+    yearBadge.innerHTML = `<i class="fa-regular fa-calendar" style="color: #38bdf8; margin-right: 5px;"></i> ${media.release_year || '2026'}`;
   }
 
   if (durationBadge) {
-    durationBadge.textContent = `⏱ ${media.duration || (media.type === 'tv' ? '8 Saisons' : '1h 51m')}`;
+    durationBadge.innerHTML = `<i class="fa-regular fa-clock" style="color: #38bdf8; margin-right: 5px;"></i> ${media.duration || (media.type === 'tv' ? '8 Saisons' : '1h 51m')}`;
   }
 
   if (qualityBadge) {
@@ -947,7 +968,7 @@ function setupNavigation() {
         const tvItems = STATE.allMediaList.filter(i => i.type === 'tv');
         const tvCategory = [{
           id: 'tv-all',
-          name: '📺 Toutes les Séries TV en Streaming HD',
+          name: 'Toutes les Séries TV en Streaming HD',
           items: tvItems.length > 0 ? tvItems : STATE.allMediaList.filter(i => i.type === 'tv')
         }];
         renderAllCategoryRows(tvCategory);
@@ -963,7 +984,7 @@ function setupNavigation() {
           }
           const favRow = [{
             id: 'my-list-row',
-            name: '⭐ Ma Liste de Favoris (Synchronisée Cloud)',
+            name: 'Ma Liste de Favoris (Synchronisée Cloud)',
             items: favItems
           }];
           renderAllCategoryRows(favRow);
