@@ -253,6 +253,11 @@
         <i class="fa-regular fa-bell"></i>
       </button>
 
+      <!-- USER ACCOUNT & PROFILE BUTTON -->
+      <button class="pro-icon-btn profile-btn" id="btn-user-account" aria-label="Mon Compte" title="Mon Compte / Connexion">
+        <i class="fa-regular fa-user"></i>
+      </button>
+
       <!-- DOWNLOAD ICON TRAY -->
       <button class="pro-icon-btn" id="btn-downloads-tray" aria-label="Téléchargements" title="Téléchargements">
         <i class="fa-solid fa-download"></i>
@@ -387,6 +392,23 @@
       </div>
     </div>
   </div>
+
+  <!-- ========================================================
+       5.5 CONTINUE WATCHING / REPRENDRE LA LECTURE (BACKEND SYNC)
+       ======================================================== -->
+  <section class="continue-watching-section hidden" id="continue-watching-section">
+    <div class="category-header">
+      <div class="category-title-wrap">
+        <h2 class="category-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:text-bottom; margin-right:8px; filter: drop-shadow(0 0 6px rgba(56,189,248,0.5));"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Reprendre la Lecture
+        </h2>
+        <div class="category-accent-bar"></div>
+      </div>
+    </div>
+    <div class="continue-watching-carousel" id="continue-watching-carousel">
+      <!-- Injecté dynamiquement par le backend /api/history -->
+    </div>
+  </section>
 
   <!-- ========================================================
        6. MAIN CONTENT: CURATED CATEGORY ROWS (MATCHING SCREENSHOT)
