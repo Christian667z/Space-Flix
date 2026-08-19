@@ -154,10 +154,11 @@ button {
 }
 
 .pro-logo-img {
-  width: 38px;
   height: 38px;
+  width: auto;
+  max-width: 140px;
   object-fit: contain;
-  filter: drop-shadow(0 4px 12px rgba(229, 9, 20, 0.45));
+  filter: drop-shadow(0 4px 12px rgba(56, 189, 248, 0.4));
   transition: transform 0.2s ease;
   display: block;
 }

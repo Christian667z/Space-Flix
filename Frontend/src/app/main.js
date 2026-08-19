@@ -998,6 +998,113 @@ function setupModalCloseListeners() {
 // 8. CAPSULE NAVIGATION & FILTRES (MATCHING PHOTO 2)
 // =========================================================================
 
+async function renderFavoritesView() {
+  const container = document.getElementById('main-catalog-container');
+  if (!container) return;
+
+  container.innerHTML = `
+    <div style="padding: 3rem 1rem; text-align: center; color: #94a3b8;">
+      <i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: #38bdf8; margin-bottom: 1rem;"></i>
+      <p style="font-size: 1rem;">Chargement de vos favoris synchronisés...</p>
+    </div>
+  `;
+
+  try {
+    const rawFavs = await SupabaseService.getFavorites();
+    const favIds = Array.isArray(rawFavs)
+      ? rawFavs.map(f => (typeof f === 'string' ? f : (f.media_id || f.id))).filter(Boolean)
+      : [];
+
+    if (favIds.length === 0) {
+      container.innerHTML = `
+        <section class="category-row" style="padding: 2.5rem 0;">
+          <div style="background: rgba(15, 17, 26, 0.7); border: 1px dashed rgba(56, 189, 248, 0.25); border-radius: 16px; padding: 4rem 2rem; text-align: center; max-width: 680px; margin: 0 auto;">
+            <div style="width: 72px; height: 72px; border-radius: 50%; background: rgba(56, 189, 248, 0.12); display: flex; align-items: center; justify-content: center; margin: 0 auto 1.5rem; font-size: 2rem; color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">
+              <i class="fa-regular fa-bookmark"></i>
+            </div>
+            <h3 style="font-size: 1.5rem; font-weight: 800; color: #ffffff; margin-bottom: 0.75rem; font-family: 'Plus Jakarta Sans', sans-serif;">Votre liste est vide</h3>
+            <p style="font-size: 0.95rem; color: #94a3b8; line-height: 1.6; margin-bottom: 2rem; max-width: 480px; margin-left: auto; margin-right: auto;">
+              Vous n'avez pas encore ajouté de titre. Cliquez sur le bouton <strong>« + Ma Liste »</strong> sur n'importe quel film ou série pour le retrouver ici.
+            </p>
+            <button id="btn-empty-fav-explore" class="hero-btn primary" style="margin: 0 auto; display: inline-flex; align-items: center; gap: 8px; cursor: pointer; padding: 0.75rem 1.75rem; border-radius: 12px;">
+              <i class="fa-solid fa-compass"></i>
+              <span>Explorer les Nouveautés</span>
+            </button>
+          </div>
+        </section>
+      `;
+
+      const exploreBtn = document.getElementById('btn-empty-fav-explore');
+      if (exploreBtn) {
+        exploreBtn.onclick = () => {
+          const homeNav = document.querySelector('.capsule-nav-item[data-nav="home"]');
+          if (homeNav) homeNav.click();
+        };
+      }
+      return;
+    }
+
+    // Récupérer les données réelles pour chaque favori
+    const resolvedItems = [];
+    for (const favId of favIds) {
+      const match = STATE.allMediaList.find(m => String(m.id) === String(favId) || String(m.tmdb_id) === String(favId));
+      if (match) {
+        resolvedItems.push(match);
+      } else {
+        // Résolution dynamique TMDB réelle
+        const cleanTmdbId = String(favId).replace(/^[a-z]+-/, '');
+        try {
+          const movieDetails = await TMDB.getDetails(cleanTmdbId, 'movie');
+          if (movieDetails && movieDetails.title) {
+            resolvedItems.push(movieDetails);
+            if (!STATE.allMediaList.some(m => m.id === movieDetails.id)) {
+              STATE.allMediaList.push(movieDetails);
+            }
+          }
+        } catch {
+          // Si film échoue, tenter série
+          try {
+            const tvDetails = await TMDB.getDetails(cleanTmdbId, 'tv');
+            if (tvDetails && tvDetails.title) {
+              resolvedItems.push(tvDetails);
+              if (!STATE.allMediaList.some(m => m.id === tvDetails.id)) {
+                STATE.allMediaList.push(tvDetails);
+              }
+            }
+          } catch {
+            // Ignorer si ID invalide
+          }
+        }
+      }
+    }
+
+    if (resolvedItems.length === 0) {
+      container.innerHTML = `
+        <div style="padding: 3rem 1rem; text-align: center; color: #94a3b8;">
+          <p>Aucun média correspondant n'a été trouvé dans votre liste.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const favCategories = [{
+      id: 'my-list-row',
+      name: `Ma Liste (${resolvedItems.length} titre${resolvedItems.length > 1 ? 's' : ''})`,
+      items: resolvedItems
+    }];
+
+    renderAllCategoryRows(favCategories);
+
+  } catch (err) {
+    console.error('Erreur chargement favoris réels:', err);
+    container.innerHTML = `
+      <div style="padding: 3rem 1rem; text-align: center; color: #ef4444;">
+        <p>Impossible de charger vos favoris en ce moment. Veuillez réessayer.</p>
+      </div>
+    `;
+  }
+}
+
 function setupNavigation() {
   document.querySelectorAll('.capsule-nav-item[data-nav]').forEach(item => {
     item.addEventListener('click', () => {
@@ -1026,23 +1133,7 @@ function setupNavigation() {
         renderAllCategoryRows(tvCategory);
       } else if (nav === 'favorites') {
         if (heroSection) heroSection.style.display = 'none';
-        SupabaseService.getFavorites().then(favs => {
-          let favItems = [];
-          if (favs && favs.length > 0) {
-            favItems = STATE.allMediaList.filter(m => 
-              favs.some(f => (typeof f === 'string' ? (f === String(m.id) || f === String(m.tmdb_id)) : (f.media_id === String(m.id) || f.media_id === String(m.tmdb_id))))
-            );
-          }
-          if (favItems.length === 0) {
-            favItems = STATE.allMediaList.slice(0, 6);
-          }
-          const favRow = [{
-            id: 'my-list-row',
-            name: 'Ma Liste de Favoris (Synchronisée Cloud)',
-            items: favItems
-          }];
-          renderAllCategoryRows(favRow);
-        });
+        renderFavoritesView();
       }
     });
   });
