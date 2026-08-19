@@ -1,0 +1,63 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120" fill="none">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="iconBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0e1322"/>
+      <stop offset="50%" stop-color="#0a0c16"/>
+      <stop offset="100%" stop-color="#030408"/>
+    </linearGradient>
+
+    <!-- Outer Glow Cyan/Sky -->
+    <linearGradient id="neonCyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+
+    <!-- Red/Crimson Accent Ribbon -->
+    <linearGradient id="neonRedGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff4b55"/>
+      <stop offset="50%" stop-color="#e50914"/>
+      <stop offset="100%" stop-color="#b91c1c"/>
+    </linearGradient>
+
+    <!-- Shimmer Highlight -->
+    <linearGradient id="glassShimmer" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.0"/>
+    </linearGradient>
+
+    <!-- Drop Shadows -->
+    <filter id="glowCyan" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    
+    <filter id="glowRed" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="4" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- Base Rounded Container with subtle border -->
+  <rect x="6" y="6" width="108" height="108" rx="26" fill="url(#iconBgGrad)" stroke="rgba(56, 189, 248, 0.25)" stroke-width="2"/>
+  <rect x="6" y="6" width="108" height="54" rx="26" fill="url(#glassShimmer)"/>
+
+  <!-- Left Dynamic Ribbon (H Leg & Cinema Reel Wing) -->
+  <path d="M30 32 C30 28, 34 26, 38 28 L48 34 C50 35, 52 38, 52 41 L52 82 C52 86, 48 88, 44 86 L34 80 C32 79, 30 76, 30 73 Z" fill="url(#neonCyanGrad)" filter="url(#glowCyan)"/>
+
+  <!-- Right Dynamic Ribbon (F Wing & Angle) -->
+  <path d="M72 32 C72 28, 76 26, 80 28 L90 34 C92 35, 94 38, 94 41 L94 82 C94 86, 90 88, 86 86 L76 80 C74 79, 72 76, 72 73 Z" fill="url(#neonCyanGrad)" filter="url(#glowCyan)"/>
+
+  <!-- Center Diagonal Cinematic Ribbon (Red Accent / Netflix Style Fold) -->
+  <path d="M38 30 L86 78 C88 80, 88 84, 85 86 L77 92 C74 94, 70 93, 68 90 L20 42 C18 40, 18 36, 21 34 L29 28 C32 26, 36 27, 38 30 Z" fill="url(#neonRedGrad)" opacity="0.9" filter="url(#glowRed)"/>
+
+  <!-- Glowing Play Arrow in center -->
+  <polygon points="56,48 76,60 56,72" fill="#ffffff" filter="url(#glowCyan)"/>
+  <polygon points="56,48 76,60 56,72" fill="url(#neonCyanGrad)"/>
+  <polygon points="58,52 72,60 58,68" fill="#ffffff"/>
+  
+  <!-- Subtle Highlight Dots -->
+  <circle cx="94" cy="26" r="3" fill="#38bdf8" filter="url(#glowCyan)"/>
+  <circle cx="26" cy="94" r="2.5" fill="#ff4b55" filter="url(#glowRed)"/>
+</svg>

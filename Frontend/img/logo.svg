@@ -1,0 +1,69 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 80" width="320" height="80" fill="none">
+  <defs>
+    <!-- Background / Icon Gradient -->
+    <linearGradient id="logoBgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0e1322"/>
+      <stop offset="100%" stop-color="#05070e"/>
+    </linearGradient>
+
+    <!-- Cyan/Sky Gradient -->
+    <linearGradient id="cyanGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#38bdf8"/>
+      <stop offset="50%" stop-color="#0284c7"/>
+      <stop offset="100%" stop-color="#0369a1"/>
+    </linearGradient>
+
+    <!-- Red/Crimson Accent Gradient -->
+    <linearGradient id="redGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff4b55"/>
+      <stop offset="50%" stop-color="#e50914"/>
+      <stop offset="100%" stop-color="#b91c1c"/>
+    </linearGradient>
+
+    <!-- Glowing Filters -->
+    <filter id="logoCyanGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3.5" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+    <filter id="logoRedGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+  </defs>
+
+  <!-- ================= LOGO EMBLEM (LEFT) ================= -->
+  <g transform="translate(6, 6)">
+    <!-- Base Rounded Square -->
+    <rect x="0" y="0" width="68" height="68" rx="18" fill="url(#logoBgGrad)" stroke="rgba(56, 189, 248, 0.3)" stroke-width="1.5"/>
+    
+    <!-- Left Vertical Ribbon -->
+    <path d="M16 16 C16 13, 19 12, 22 13 L28 16 C30 17, 31 19, 31 21 L31 47 C31 50, 28 51, 25 50 L19 47 C17 46, 16 44, 16 42 Z" fill="url(#cyanGrad)" filter="url(#logoCyanGlow)"/>
+
+    <!-- Right Vertical Ribbon -->
+    <path d="M43 16 C43 13, 46 12, 49 13 L55 16 C57 17, 58 19, 58 21 L58 47 C58 50, 55 51, 52 50 L46 47 C44 46, 43 44, 43 42 Z" fill="url(#cyanGrad)" filter="url(#logoCyanGlow)"/>
+
+    <!-- Center Diagonal Cinematic Ribbon (Red Accent) -->
+    <path d="M22 15 L52 49 C54 51, 54 53, 52 55 L47 59 C45 60, 42 60, 40 58 L10 24 C8 22, 8 20, 10 18 L15 14 C17 13, 20 13, 22 15 Z" fill="url(#redGrad)" opacity="0.95" filter="url(#logoRedGlow)"/>
+
+    <!-- Center Crisp Play Triangle -->
+    <polygon points="32,27 45,34 32,41" fill="#ffffff"/>
+  </g>
+
+  <!-- ================= TYPOGRAPHY (RIGHT) ================= -->
+  <g transform="translate(86, 0)">
+    <!-- Brand Title: HANDY (Cyan/White) + FLIX (White) -->
+    <text x="0" y="44" font-family="'Outfit', 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif" font-weight="900" font-size="32" letter-spacing="-0.03em">
+      <tspan fill="#38bdf8">HANDY</tspan>
+      <tspan fill="#ffffff">FLIX</tspan>
+    </text>
+    
+    <!-- Pro HD Tag Pill -->
+    <rect x="168" y="22" width="38" height="18" rx="5" fill="#e50914" opacity="0.95"/>
+    <text x="187" y="35" font-family="'Outfit', system-ui, sans-serif" font-weight="800" font-size="10" fill="#ffffff" text-anchor="middle" letter-spacing="0.05em">PRO</text>
+
+    <!-- Subtitle / Tagline -->
+    <text x="1" y="62" font-family="'Plus Jakarta Sans', system-ui, sans-serif" font-weight="600" font-size="10.5" fill="rgba(255, 255, 255, 0.45)" letter-spacing="0.14em">
+      WATCH WITHOUT LIMITS
+    </text>
+  </g>
+</svg>
