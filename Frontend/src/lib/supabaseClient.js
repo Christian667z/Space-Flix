@@ -65,6 +65,69 @@ export const SupabaseService = {
     return !!supabase;
   },
 
+  async getCurrentUser() {
+    if (supabase) {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
+        return user;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
+  },
+
+  async signIn({ email, password }) {
+    if (supabase) {
+      return await supabase.auth.signInWithPassword({ email, password });
+    }
+    return { data: { user: { email } }, error: null };
+  },
+
+  async signUp({ email, password, name }) {
+    if (supabase) {
+      return await supabase.auth.signUp({
+        email,
+        password,
+        options: { data: { full_name: name } }
+      });
+    }
+    return { data: { user: { email } }, error: null };
+  },
+
+  async signOut() {
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
+  },
+
+  async signInWithGoogle() {
+    if (supabase) {
+      return await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin }
+      });
+    }
+  },
+
+  async getWatchHistory() {
+    return await this.getAllContinueWatching();
+  },
+
+  async saveWatchProgress(params) {
+    const { media_id, media, season = 1, episode = 1, progress_seconds = 60, duration_seconds = 7200 } = params;
+    return await this.savePlaybackProgress({
+      mediaId: media_id || media?.id,
+      title: media?.title || 'Titre',
+      type: media?.type || 'movie',
+      posterUrl: media?.poster_url || '',
+      seasonNumber: season,
+      episodeNumber: episode,
+      currentTime: progress_seconds,
+      duration: duration_seconds
+    });
+  },
+
   async getConfig() {
     return {
       url: SUPABASE_URL,

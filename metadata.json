@@ -1,6 +1,6 @@
 {
   "name": "Space Flix",
-  "description": "Plateforme de streaming films et séries HD gratuit en VF et VOSTFR avec multi-serveurs et catalogue TMDB/Supabase.",
+  "description": "Plateforme de streaming HD de films et séries avec Hero Spotlight, carrousels par catégories, tiroirs, FAQ et lecteur multi-serveurs.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
