@@ -1,10 +1,19 @@
 import express from 'express';
 import path from 'path';
 import fs from 'fs';
-import crypto from 'crypto';
 import { fileURLToPath } from 'url';
 import { createRequire } from 'module';
-import bcrypt from 'bcryptjs';
+
+// Import des routes modulaires Backend
+import authRoutes from './Backend/routes/auth.js';
+import healthRoutes from './Backend/routes/health.js';
+import tmdbRoutes from './Backend/routes/tmdb.js';
+import historyRoutes from './Backend/routes/history.js';
+import favoritesRoutes from './Backend/routes/favorites.js';
+import reportRoutes from './Backend/routes/report.js';
+
+// Import des middlewares
+import { errorHandler, notFoundHandler } from './Backend/middlewares/errorHandler.js';
 
 const require = createRequire(import.meta.url);
 const archiver = require('archiver');
@@ -15,7 +24,9 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware de sécurité et CORS
+// =========================================================================
+// 1. MIDDLEWARES DE SÉCURITÉ & PARSING
+// =========================================================================
 app.use((req, res, next) => {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-XSS-Protection', '1; mode=block');
@@ -28,614 +39,21 @@ app.use((req, res, next) => {
   next();
 });
 
-// Middleware pour parser JSON et URL-encoded avec limites de taille
 app.use(express.json({ limit: '2mb' }));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 
 // =========================================================================
-// 1. SYSTÈME DE CACHE MÉMOIRE HAUTE PERFORMANCE (TTL & LRU)
+// 2. ENREGISTREMENT DES ROUTES API (/api/*)
 // =========================================================================
-const CACHE_STORE = new Map();
-const DEFAULT_TTL_MS = 60 * 60 * 1000; // 1 heure par défaut
-
-function getFromCache(key) {
-  const item = CACHE_STORE.get(key);
-  if (!item) return null;
-  if (Date.now() > item.expiry) {
-    CACHE_STORE.delete(key);
-    return null;
-  }
-  return item.data;
-}
-
-function setInCache(key, data, ttlMs = DEFAULT_TTL_MS) {
-  // Limiter la taille du cache à 500 entrées max pour préserver la RAM
-  if (CACHE_STORE.size > 500) {
-    const oldestKey = CACHE_STORE.keys().next().value;
-    CACHE_STORE.delete(oldestKey);
-  }
-  CACHE_STORE.set(key, {
-    data,
-    expiry: Date.now() + ttlMs,
-    createdAt: new Date().toISOString()
-  });
-}
+app.use('/api/auth', authRoutes);
+app.use('/api', healthRoutes); // /api/health, /api/cache/stats
+app.use('/api/tmdb', tmdbRoutes);
+app.use('/api/history', historyRoutes);
+app.use('/api/favorites', favoritesRoutes);
+app.use('/api/report', reportRoutes);
 
 // =========================================================================
-// 2. STOCKAGE PERSISTANT LOCAL AVEC FICHIER JSON (.data/db.json)
-// =========================================================================
-const DATA_DIR = path.join(__dirname, '.data');
-const DB_FILE = path.join(DATA_DIR, 'db.json');
-
-const DB = {
-  users: new Map(), // email -> user data (with passwordHash)
-  sessions: new Map(), // token -> user
-  history: new Map(), // userId -> [history items]
-  favorites: new Map(), // userId -> Set of mediaIds
-  reports: [] // [broken stream reports]
-};
-
-// Initialisation utilisateur démo
-const demoPasswordHash = bcrypt.hashSync('demo1234', 10);
-DB.users.set('demo@handyflix.com', {
-  id: 'user-demo-1',
-  email: 'demo@handyflix.com',
-  name: 'Cinéphile VIP',
-  passwordHash: demoPasswordHash,
-  avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
-  createdAt: new Date().toISOString()
-});
-DB.history.set('user-demo-1', []);
-DB.favorites.set('user-demo-1', new Set());
-
-// Charger la base de données depuis le disque si elle existe
-function loadDatabase() {
-  try {
-    if (!fs.existsSync(DATA_DIR)) {
-      fs.mkdirSync(DATA_DIR, { recursive: true });
-    }
-    if (fs.existsSync(DB_FILE)) {
-      const raw = fs.readFileSync(DB_FILE, 'utf-8');
-      const data = JSON.parse(raw);
-      
-      if (Array.isArray(data.users)) {
-        for (const u of data.users) {
-          DB.users.set(u.email, u);
-        }
-      }
-      if (Array.isArray(data.sessions)) {
-        for (const [token, user] of data.sessions) {
-          // Relier à l'objet utilisateur frais de DB.users
-          const freshUser = DB.users.get(user.email) || user;
-          DB.sessions.set(token, freshUser);
-        }
-      }
-      if (Array.isArray(data.history)) {
-        for (const [userId, hist] of data.history) {
-          DB.history.set(userId, hist);
-        }
-      }
-      if (Array.isArray(data.favorites)) {
-        for (const [userId, favs] of data.favorites) {
-          DB.favorites.set(userId, new Set(favs));
-        }
-      }
-      if (Array.isArray(data.reports)) {
-        DB.reports = data.reports;
-      }
-      console.log('[DB] Base de données et sessions locales chargées avec succès.');
-    }
-  } catch (err) {
-    console.warn('[DB] Impossible de charger la base locale, utilisation de la mémoire:', err.message);
-  }
-}
-
-// Sauvegarde debouncée sur disque
-let saveTimeout = null;
-function persistDatabase() {
-  clearTimeout(saveTimeout);
-  saveTimeout = setTimeout(() => {
-    try {
-      if (!fs.existsSync(DATA_DIR)) {
-        fs.mkdirSync(DATA_DIR, { recursive: true });
-      }
-      const serializable = {
-        users: Array.from(DB.users.values()),
-        sessions: Array.from(DB.sessions.entries()),
-        history: Array.from(DB.history.entries()),
-        favorites: Array.from(DB.favorites.entries()).map(([k, set]) => [k, Array.from(set)]),
-        reports: DB.reports.slice(0, 100)
-      };
-      fs.writeFileSync(DB_FILE, JSON.stringify(serializable, null, 2), 'utf-8');
-    } catch (err) {
-      console.warn('[DB] Erreur lors de la sauvegarde sur disque:', err.message);
-    }
-  }, 1000);
-}
-
-loadDatabase();
-
-// Rate limiter simple en mémoire pour les routes sensibles d'authentification
-const RATE_LIMIT_STORE = new Map();
-function rateLimit(windowMs = 15 * 60 * 1000, maxRequests = 30) {
-  return (req, res, next) => {
-    const ip = req.ip || req.headers['x-forwarded-for'] || 'client-ip';
-    const now = Date.now();
-    const clientRecord = RATE_LIMIT_STORE.get(ip) || { count: 0, resetAt: now + windowMs };
-
-    if (now > clientRecord.resetAt) {
-      clientRecord.count = 1;
-      clientRecord.resetAt = now + windowMs;
-    } else {
-      clientRecord.count += 1;
-    }
-
-    RATE_LIMIT_STORE.set(ip, clientRecord);
-
-    if (clientRecord.count > maxRequests) {
-      return res.status(429).json({
-        error: 'Trop de requêtes. Veuillez patienter avant de réessayer.',
-        retryAfterSeconds: Math.ceil((clientRecord.resetAt - now) / 1000)
-      });
-    }
-    next();
-  };
-}
-
-// Helper pour récupérer l'ID utilisateur de façon sécurisée
-const DEFAULT_USER_ID = 'guest-user-default';
-
-function resolveUser(req) {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7).trim();
-    if (token && DB.sessions.has(token)) {
-      return DB.sessions.get(token);
-    }
-  }
-  return null;
-}
-
-function resolveUserId(req) {
-  const user = resolveUser(req);
-  if (user) return user.id;
-  return DEFAULT_USER_ID;
-}
-
-// =========================================================================
-// 3. PROXY TMDB AVEC CACHE INTELLIGENT & SÉCURISATION
-// =========================================================================
-app.get('/api/tmdb/*', async (req, res) => {
-  try {
-    const rawPath = req.params[0] || '';
-    // Sécurité: interdire la traversée de répertoire et nettoyer le chemin
-    const tmdbPath = rawPath.replace(/\.\./g, '').replace(/^\/+/, '');
-    
-    if (!tmdbPath) {
-      return res.status(400).json({ error: 'Chemin TMDB manquant.' });
-    }
-
-    const apiKey = process.env.TMDB_API_KEY || '99b995150ed16f5fc8a3fff320ca41df';
-    
-    // Clé unique pour le cache basée sur le chemin et les query params
-    const queryString = new URLSearchParams(req.query).toString();
-    const cacheKey = `tmdb:${tmdbPath}?${queryString}`;
-
-    const cachedData = getFromCache(cacheKey);
-    if (cachedData) {
-      res.setHeader('X-Cache-Status', 'HIT');
-      res.setHeader('Cache-Control', 'public, max-age=3600');
-      return res.json(cachedData);
-    }
-
-    const url = new URL(`https://api.themoviedb.org/3/${tmdbPath}`);
-    url.searchParams.set('api_key', apiKey);
-    if (!req.query.language) {
-      url.searchParams.set('language', 'fr-FR');
-    }
-    
-    for (const [key, value] of Object.entries(req.query)) {
-      if (value !== undefined && value !== null && key !== 'api_key') {
-        url.searchParams.set(key, String(value));
-      }
-    }
-
-    const response = await fetch(url.toString(), {
-      headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'SPACEFLIX-Node/3.0'
-      }
-    });
-
-    const contentType = response.headers.get('content-type') || '';
-    if (!contentType.includes('application/json')) {
-      return res.status(response.status >= 400 ? response.status : 502).json({
-        error: 'TMDB a retourné une réponse non-JSON',
-        status: response.status
-      });
-    }
-
-    const data = await response.json();
-
-    if (response.ok) {
-      // Cache pour 1h pour les tendances / populaires, 30m pour la recherche
-      const ttl = tmdbPath.includes('trending') || tmdbPath.includes('popular')
-        ? 60 * 60 * 1000
-        : 30 * 60 * 1000;
-
-      setInCache(cacheKey, data, ttl);
-      res.setHeader('X-Cache-Status', 'MISS');
-      res.setHeader('Cache-Control', 'public, max-age=1800');
-    }
-
-    res.status(response.status).json(data);
-  } catch (err) {
-    console.error('TMDB Proxy Error:', err);
-    res.status(502).json({ error: 'Échec de la communication avec TMDB', message: err.message });
-  }
-});
-
-// Endpoint d'état du cache et de santé
-app.get('/api/health', (req, res) => {
-  res.json({
-    status: 'ok',
-    service: 'SpaceFlix API',
-    uptimeSeconds: Math.round(process.uptime()),
-    timestamp: new Date().toISOString(),
-    database: {
-      usersCount: DB.users.size,
-      activeSessions: DB.sessions.size,
-      reportsCount: DB.reports.length
-    }
-  });
-});
-
-app.get('/api/cache/stats', (req, res) => {
-  res.json({
-    totalEntries: CACHE_STORE.size,
-    uptimeSeconds: Math.round(process.uptime()),
-    memoryUsageMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024)
-  });
-});
-
-// =========================================================================
-// 4. API AUTHENTIFICATION & PROFILS SÉCURISÉE (/api/auth/*)
-// =========================================================================
-
-// Inscription sécurisée avec hachage bcrypt et limitation de débit
-app.post('/api/auth/register', rateLimit(15 * 60 * 1000, 10), (req, res) => {
-  const { email, password, name } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Email et mot de passe requis.' });
-  }
-
-  if (typeof password !== 'string' || password.length < 6) {
-    return res.status(400).json({ error: 'Le mot de passe doit comporter au moins 6 caractères.' });
-  }
-
-  const cleanEmail = String(email).trim().toLowerCase();
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(cleanEmail)) {
-    return res.status(400).json({ error: 'Format d\'adresse email invalide.' });
-  }
-
-  if (DB.users.has(cleanEmail)) {
-    return res.status(409).json({ error: 'Un compte avec cet email existe déjà.' });
-  }
-
-  const userId = `user_${Date.now()}_${crypto.randomBytes(4).toString('hex')}`;
-  const passwordHash = bcrypt.hashSync(password, 10);
-  
-  const newUser = {
-    id: userId,
-    email: cleanEmail,
-    name: (name && String(name).trim()) || cleanEmail.split('@')[0],
-    passwordHash,
-    avatar: `https://api.dicebear.com/7.x/bottts/svg?seed=${encodeURIComponent(cleanEmail)}`,
-    createdAt: new Date().toISOString()
-  };
-
-  DB.users.set(cleanEmail, newUser);
-  DB.history.set(userId, []);
-  DB.favorites.set(userId, new Set());
-
-  // Créer un token de session cryptographiquement sécurisé
-  const token = `tok_${crypto.randomBytes(32).toString('hex')}`;
-  DB.sessions.set(token, newUser);
-  persistDatabase();
-
-  // Ne pas renvoyer le hash du mot de passe
-  const { passwordHash: _, ...safeUser } = newUser;
-
-  res.status(201).json({
-    message: 'Compte créé avec succès !',
-    user: safeUser,
-    token
-  });
-});
-
-// Connexion sécurisée avec vérification de mot de passe et limitation de débit
-app.post('/api/auth/login', rateLimit(15 * 60 * 1000, 20), (req, res) => {
-  const { email, password } = req.body;
-  if (!email || !password) {
-    return res.status(400).json({ error: 'Veuillez saisir votre email et votre mot de passe.' });
-  }
-
-  const cleanEmail = String(email).trim().toLowerCase();
-  const user = DB.users.get(cleanEmail);
-
-  if (!user) {
-    return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
-  }
-
-  // Vérification du mot de passe
-  const isMatch = user.passwordHash ? bcrypt.compareSync(password, user.passwordHash) : false;
-  if (!isMatch) {
-    return res.status(401).json({ error: 'Email ou mot de passe incorrect.' });
-  }
-
-  const token = `tok_${crypto.randomBytes(32).toString('hex')}`;
-  DB.sessions.set(token, user);
-  persistDatabase();
-
-  const { passwordHash: _, ...safeUser } = user;
-
-  res.json({
-    message: 'Connexion réussie !',
-    user: safeUser,
-    token
-  });
-});
-
-// Profil Actif
-app.get('/api/auth/me', (req, res) => {
-  const user = resolveUser(req);
-  if (user) {
-    const { passwordHash: _, ...safeUser } = user;
-    return res.json({ user: safeUser, authenticated: true });
-  }
-
-  // Profil invité si non authentifié
-  res.json({
-    user: {
-      id: DEFAULT_USER_ID,
-      email: 'guest@handyflix.online',
-      name: 'Invité Stream',
-      avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
-      isGuest: true
-    },
-    authenticated: false
-  });
-});
-
-// Mise à jour du profil utilisateur
-app.put('/api/auth/profile', (req, res) => {
-  const user = resolveUser(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Authentification requise.' });
-  }
-
-  const { name, avatar } = req.body;
-  if (name && typeof name === 'string') {
-    user.name = name.trim().slice(0, 50);
-  }
-  if (avatar && typeof avatar === 'string') {
-    user.avatar = avatar.trim().slice(0, 500);
-  }
-  user.updatedAt = new Date().toISOString();
-
-  DB.users.set(user.email, user);
-  persistDatabase();
-
-  const { passwordHash: _, ...safeUser } = user;
-  res.json({ success: true, message: 'Profil mis à jour.', user: safeUser });
-});
-
-// Changement de mot de passe sécurisé
-app.put('/api/auth/password', (req, res) => {
-  const user = resolveUser(req);
-  if (!user) {
-    return res.status(401).json({ error: 'Authentification requise.' });
-  }
-
-  const { currentPassword, newPassword } = req.body;
-  if (!currentPassword || !newPassword) {
-    return res.status(400).json({ error: 'Mot de passe actuel et nouveau mot de passe requis.' });
-  }
-
-  if (typeof newPassword !== 'string' || newPassword.length < 6) {
-    return res.status(400).json({ error: 'Le nouveau mot de passe doit comporter au moins 6 caractères.' });
-  }
-
-  const isCurrentValid = user.passwordHash ? bcrypt.compareSync(currentPassword, user.passwordHash) : false;
-  if (!isCurrentValid) {
-    return res.status(401).json({ error: 'Mot de passe actuel incorrect.' });
-  }
-
-  user.passwordHash = bcrypt.hashSync(newPassword, 10);
-  user.updatedAt = new Date().toISOString();
-  DB.users.set(user.email, user);
-  persistDatabase();
-
-  res.json({ success: true, message: 'Mot de passe modifié avec succès.' });
-});
-
-// Déconnexion
-app.post('/api/auth/logout', (req, res) => {
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    const token = authHeader.substring(7).trim();
-    DB.sessions.delete(token);
-    persistDatabase();
-  }
-  res.json({ message: 'Déconnexion effectuée.' });
-});
-
-// =========================================================================
-// 5. API HISTORIQUE & REPRISE DE LECTURE (CONTINUE WATCHING) (/api/history)
-// =========================================================================
-
-// Récupérer l'historique d'un utilisateur
-app.get('/api/history', (req, res) => {
-  const userId = resolveUserId(req);
-  const userHistory = DB.history.get(userId) || [];
-  
-  // Trier par date de visionnage la plus récente
-  const sorted = [...userHistory].sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt));
-  res.json({ history: sorted, total: sorted.length });
-});
-
-// Enregistrer la progression d'un visionnage (prise en compte des séries & films)
-app.post('/api/history', (req, res) => {
-  const userId = resolveUserId(req);
-  const { media, season = 1, episode = 1, progress = 0, duration = 0, completed = false } = req.body;
-
-  if (!media || !media.id) {
-    return res.status(400).json({ error: 'Données de média manquantes.' });
-  }
-
-  if (!DB.history.has(userId)) {
-    DB.history.set(userId, []);
-  }
-
-  const list = DB.history.get(userId);
-  const sNum = Number(season) || 1;
-  const eNum = Number(episode) || 1;
-
-  // Recherche d'un enregistrement existant (par média et saison/épisode si série)
-  const existingIdx = list.findIndex(h => 
-    (h.mediaId === media.id || h.media?.id === media.id) &&
-    (media.type !== 'tv' || (h.season === sNum && h.episode === eNum))
-  );
-
-  const historyItem = {
-    mediaId: media.id,
-    media: {
-      id: media.id,
-      tmdb_id: media.tmdb_id,
-      title: media.title,
-      poster_url: media.poster_url,
-      backdrop_url: media.backdrop_url,
-      type: media.type || 'movie',
-      rating: media.rating
-    },
-    season: sNum,
-    episode: eNum,
-    progressPercent: Math.min(100, Math.max(0, Number(progress) || 0)),
-    durationSeconds: Math.max(0, Number(duration) || 0),
-    completed: Boolean(completed),
-    updatedAt: new Date().toISOString()
-  };
-
-  if (existingIdx >= 0) {
-    list[existingIdx] = historyItem;
-  } else {
-    list.unshift(historyItem);
-    // Limiter l'historique à 30 entrées par utilisateur
-    if (list.length > 30) list.pop();
-  }
-
-  persistDatabase();
-  res.json({ success: true, historyItem });
-});
-
-// Supprimer un élément de l'historique
-app.delete('/api/history/:mediaId', (req, res) => {
-  const userId = resolveUserId(req);
-  const mediaId = req.params.mediaId;
-  const { season, episode } = req.query;
-  
-  if (DB.history.has(userId)) {
-    let list = DB.history.get(userId);
-    if (season !== undefined && episode !== undefined) {
-      list = list.filter(h => !( (h.mediaId === mediaId || h.media?.id === mediaId) && h.season === Number(season) && h.episode === Number(episode) ));
-    } else {
-      list = list.filter(h => h.mediaId !== mediaId && h.media?.id !== mediaId);
-    }
-    DB.history.set(userId, list);
-    persistDatabase();
-  }
-  res.json({ success: true, message: 'Élément retiré de la reprise de lecture.' });
-});
-
-// =========================================================================
-// 6. API FAVORIS & MA LISTE (/api/favorites)
-// =========================================================================
-
-app.get('/api/favorites', (req, res) => {
-  const userId = resolveUserId(req);
-  const favSet = DB.favorites.get(userId) || new Set();
-  res.json({ favorites: Array.from(favSet) });
-});
-
-app.post('/api/favorites/toggle', (req, res) => {
-  const userId = resolveUserId(req);
-  const { mediaId } = req.body;
-
-  if (!mediaId || typeof mediaId !== 'string') {
-    return res.status(400).json({ error: 'mediaId valide requis.' });
-  }
-
-  if (!DB.favorites.has(userId)) {
-    DB.favorites.set(userId, new Set());
-  }
-
-  const favSet = DB.favorites.get(userId);
-  let added = false;
-
-  if (favSet.has(mediaId)) {
-    favSet.delete(mediaId);
-    added = false;
-  } else {
-    favSet.add(mediaId);
-    added = true;
-  }
-
-  persistDatabase();
-  res.json({ added, mediaId, totalFavorites: favSet.size });
-});
-
-// =========================================================================
-// 7. API SIGNALEMENT DE LIENS MORTS & BASCULEMENT DE SERVEUR (/api/report)
-// =========================================================================
-
-app.post('/api/report', (req, res) => {
-  const { tmdb_id, media_title, server_name, server_index, error_type, details } = req.body;
-
-  const report = {
-    id: `rep_${Date.now()}_${crypto.randomBytes(3).toString('hex')}`,
-    tmdb_id: tmdb_id || 'unknown',
-    media_title: media_title || 'Titre inconnu',
-    server_name: server_name || 'Serveur 1',
-    server_index: Number(server_index || 0),
-    error_type: error_type || 'broken_stream',
-    details: details || 'Le flux vidéo ne charge pas',
-    reportedAt: new Date().toISOString()
-  };
-
-  DB.reports.unshift(report);
-  if (DB.reports.length > 200) DB.reports.pop();
-  persistDatabase();
-
-  console.log(`[RAPPORT SERVEUR] Signalement reçu pour "${report.media_title}" sur ${report.server_name}`);
-
-  // Calcul du serveur alternatif recommandé
-  const fallbackIndex = (Number(server_index || 0) + 1) % 5;
-
-  res.status(201).json({
-    success: true,
-    message: 'Merci ! Votre signalement a été enregistré. Basculement automatique suggéré.',
-    reportId: report.id,
-    recommendedServerIndex: fallbackIndex
-  });
-});
-
-app.get('/api/reports', (req, res) => {
-  res.json({ reports: DB.reports.slice(0, 20), total: DB.reports.length });
-});
-
-// =========================================================================
-// 8. TÉLÉCHARGEMENT DU CODE SOURCE ZIP (/download-zip) SÉCURISÉ
+// 3. TÉLÉCHARGEMENT DU CODE SOURCE ZIP (/download-zip)
 // =========================================================================
 const handleZipDownload = (req, res) => {
   const archive = archiver('zip', {
@@ -681,18 +99,12 @@ app.get('/download-zip', handleZipDownload);
 app.get('/api/download-zip', handleZipDownload);
 
 // =========================================================================
-// 9. GESTION DES ROUTES API INCONNUES (Évite de renvoyer le HTML index.html en 404 JSON)
+// 4. GESTION DES ROUTES API INCONNUES (404 JSON)
 // =========================================================================
-app.all('/api/*', (req, res) => {
-  res.status(404).json({
-    error: 'Endpoint API introuvable',
-    method: req.method,
-    path: req.originalUrl
-  });
-});
+app.all('/api/*', notFoundHandler);
 
 // =========================================================================
-// 10. FICHIERS STATIQUES & ROUTES HTML
+// 5. FICHIERS STATIQUES & ROUTES HTML FRONTEND
 // =========================================================================
 app.use(express.static(path.join(__dirname, 'Frontend')));
 
@@ -717,21 +129,9 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'Frontend', 'index.html'));
 });
 
-// Global Error Handler Middleware
-app.use((err, req, res, next) => {
-  console.error('[UNHANDLED ERROR]', err);
-  if (res.headersSent) {
-    return next(err);
-  }
-  if (req.path.startsWith('/api/')) {
-    return res.status(500).json({ error: 'Erreur interne du serveur', message: err.message });
-  }
-  res.status(500).send('Erreur interne du serveur');
-});
+// Middleware Global de Gestion des Erreurs
+app.use(errorHandler);
 
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(`[SPACE FLIX] Server running with in-memory cache, auth & API endpoints on http://0.0.0.0:${PORT}`);
+  console.log(`[SPACE FLIX] Serveur démarré avec architecture modulaire sur http://0.0.0.0:${PORT}`);
 });
-
-
-

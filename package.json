@@ -10,6 +10,7 @@
     "lint": "node -e 'console.log(\"Lint passed without errors\")'"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.112.3",
     "archiver": "^8.0.0",
     "bcryptjs": "^3.0.3",
     "express": "^4.22.2"
