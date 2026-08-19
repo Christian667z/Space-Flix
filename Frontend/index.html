@@ -591,14 +591,68 @@
 
       <!-- VIDEO PLAYER & SERVERS EMBED SECTION -->
       <div class="movie-player-section" id="movie-player-section">
-        <!-- SERVERS PILLS BAR -->
-        <div class="stream-servers-bar" id="stream-servers-container">
-          <!-- Boutons serveurs générés par JS -->
+        <!-- TOP TOOLBAR WITH SERVERS AND EXTERNAL TAB BUTTON -->
+        <div class="stream-toolbar-row" style="display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap;">
+          <div class="stream-servers-bar" id="stream-servers-container" style="flex: 1; min-width: 280px;">
+            <!-- Boutons serveurs générés par JS -->
+          </div>
+          <button id="btn-open-external-tab" class="stream-external-tab-btn" title="Ouvrir dans un lecteur autonome ou plein écran">
+            <i class="fa-solid fa-arrow-up-right-from-square"></i>
+            <span>Ouvrir en Plein Écran</span>
+          </button>
         </div>
 
-        <!-- VIDEO IFRAME -->
-        <div class="stream-video-container">
-          <iframe id="stream-video-iframe" class="stream-video-iframe" allowfullscreen allow="fullscreen; autoplay; encrypted-media; picture-in-picture"></iframe>
+        <!-- VIDEO CONTAINER WITH PREVIEW & ACTIVE IFRAME -->
+        <div class="stream-video-container" id="stream-video-container" style="position: relative;">
+          
+          <!-- 1. CINEMA SCREEN PREVIEW PLACEHOLDER (AFFICHÉ DE BASE AVEC LE BOUTON PLAY) -->
+          <div class="stream-player-preview" id="stream-player-preview">
+            <div class="stream-preview-backdrop" id="stream-preview-backdrop"></div>
+            <div class="stream-preview-overlay"></div>
+            
+            <div class="stream-preview-center-content">
+              <button class="stream-preview-play-btn" id="video-preview-play-btn" aria-label="Lancer la lecture">
+                <div class="preview-play-pulse-ring"></div>
+                <div class="preview-play-icon-box">
+                  <i class="fa-solid fa-play"></i>
+                </div>
+              </button>
+              <div class="stream-preview-labels">
+                <h3 class="stream-preview-main-title" id="preview-movie-title">Lancer la Lecture HD</h3>
+                <p class="stream-preview-meta-desc">
+                  <span class="preview-tag-hd">1080P ULTRA HD</span>
+                  <span class="preview-tag-audio">VF / VOSTFR</span>
+                  <span class="preview-tag-free">SANS ABONNEMENT</span>
+                </p>
+              </div>
+            </div>
+
+            <div class="stream-preview-bottom-info">
+              <div class="stream-preview-server-status">
+                <span class="server-dot-online"></span>
+                <span id="preview-active-server-name">Serveur 1 - VidLink HD (Prêt)</span>
+              </div>
+              <span class="stream-preview-hint">Cliquez sur Play pour démarrer le flux instantanément</span>
+            </div>
+          </div>
+
+          <!-- 2. ACTIVE VIDEO STREAM (ACTIVÉ AU CLIC SUR LE BOUTON PLAY) -->
+          <div class="stream-player-active hidden" id="stream-player-active">
+            <div class="stream-iframe-loader" id="stream-iframe-loader">
+              <div class="stream-spinner-icon">
+                <i class="fa-solid fa-circle-notch fa-spin"></i>
+              </div>
+              <span class="stream-loader-text">Connexion au flux vidéo 1080P...</span>
+              <span class="stream-loader-subtext">Chargement du lecteur en cours</span>
+            </div>
+            <iframe id="stream-video-iframe" class="stream-video-iframe" allowfullscreen allow="autoplay; fullscreen; picture-in-picture; encrypted-media; gyroscope; accelerometer; clipboard-write; web-share" referrerpolicy="origin"></iframe>
+          </div>
+        </div>
+
+        <!-- HELPER NOTICE -->
+        <div class="stream-helper-bar">
+          <i class="fa-solid fa-circle-info" style="color: #ff7a00;"></i>
+          <span>Astuce : Si le lecteur reste noir ou est restreint par votre navigateur, changez de <strong>Serveur</strong> ci-dessus ou cliquez sur <button id="btn-helper-open-tab" class="helper-link-btn">« Ouvrir en Plein Écran »</button>.</span>
         </div>
 
         <!-- ACTION BUTTONS -->

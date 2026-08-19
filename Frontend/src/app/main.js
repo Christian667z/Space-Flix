@@ -9,33 +9,43 @@ import { HERO_FEATURED_ITEMS, CATEGORIES_CONFIG, INITIAL_MEDIA, FAQ_DATA } from 
 import { TMDB } from '../lib/tmdbClient.js';
 import { SupabaseService } from '../lib/supabaseClient.js';
 
-// Configuration Multi-Serveurs
+// Configuration Multi-Serveurs Haut Débit 1080P VF/VOSTFR
 const CONFIG = {
   PROVIDERS: window.SPACE_FLIX_CONFIG?.AUTHORIZED_EMBED_PROVIDERS || [
     {
-      name: 'Serveur 1 - VidSrc CC (1080P VF/FR)',
+      name: 'Serveur 1 - VidLink (Multi-Audio VF 1080P)',
+      movie: 'https://vidlink.pro/movie/{tmdb_id}?primaryColor=ff7a00&secondaryColor=121212&autoplay=true',
+      tv: 'https://vidlink.pro/tv/{tmdb_id}/{season}/{episode}?primaryColor=ff7a00&secondaryColor=121212&autoplay=true'
+    },
+    {
+      name: 'Serveur 2 - VidSrc CC (1080P VF/FR)',
       movie: 'https://vidsrc.cc/v2/embed/movie/{tmdb_id}?ds_lang=fr',
       tv: 'https://vidsrc.cc/v2/embed/tv/{tmdb_id}/{season}/{episode}?ds_lang=fr'
     },
     {
-      name: 'Serveur 2 - VidLink (Multi-Audio VF)',
-      movie: 'https://vidlink.pro/movie/{tmdb_id}?primaryColor=e50914',
-      tv: 'https://vidlink.pro/tv/{tmdb_id}/{season}/{episode}?primaryColor=e50914'
+      name: 'Serveur 3 - AutoEmbed (Multi-Sources Ultra HD)',
+      movie: 'https://player.autoembed.cc/embed/movie/{tmdb_id}',
+      tv: 'https://player.autoembed.cc/embed/tv/{tmdb_id}/{season}/{episode}'
     },
     {
-      name: 'Serveur 3 - FrenchEmbed (100% VF)',
+      name: 'Serveur 4 - FrenchEmbed (100% VF)',
       movie: 'https://frembed.icu/api/film.php?id={tmdb_id}',
       tv: 'https://frembed.icu/api/serie.php?id={tmdb_id}&sa={season}&epi={episode}'
     },
     {
-      name: 'Serveur 4 - VidSrc Pro (HD Fast)',
+      name: 'Serveur 5 - VidSrc Pro (HD Fast)',
       movie: 'https://vidsrc.xyz/embed/movie/{tmdb_id}',
       tv: 'https://vidsrc.xyz/embed/tv/{tmdb_id}/{season}/{episode}'
     },
     {
-      name: 'Serveur 5 - SmashyStream (FR)',
+      name: 'Serveur 6 - SmashyStream (FR & Multi)',
       movie: 'https://player.smashy.stream/movie/{tmdb_id}',
       tv: 'https://player.smashy.stream/tv/{tmdb_id}?s={season}&e={episode}'
+    },
+    {
+      name: 'Serveur 7 - 2Embed (Stable Backup)',
+      movie: 'https://www.2embed.cc/embed/{tmdb_id}',
+      tv: 'https://www.2embed.cc/embedtv/{tmdb_id}&s={season}&e={episode}'
     }
   ]
 };
@@ -908,33 +918,110 @@ async function openStreamModal(media, season = 1, episode = 1) {
   }
 
   if (synopsisElem) {
-    synopsisElem.textContent = media.synopsis || 'Profitez de ce titre en haute définition gratuit sur HandyFlix.';
+    synopsisElem.textContent = media.synopsis || 'Profitez de ce titre en haute définition gratuit sur SPACEFLIX.';
   }
 
-  // Play Now CTA Click Scroll & Auto-Play Handler
-  const launchPlayer = () => {
-    const playerSection = document.getElementById('movie-player-section');
-    if (playerSection) {
-      playerSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-    updateIframeSource();
-    showToast(`Lecture lancée : ${media.title} (1080P VF)`);
+  // =========================================================================
+  // GESTION DU LECTEUR VIDÉO : PAR DÉFAUT AFFICHÉ EN PREVIEW AVEC BOUTON PLAY
+  // =========================================================================
+  const preview = document.getElementById('stream-player-preview');
+  const activeBox = document.getElementById('stream-player-active');
+  const previewBackdrop = document.getElementById('stream-preview-backdrop');
+  const previewTitle = document.getElementById('preview-movie-title');
+  const previewServer = document.getElementById('preview-active-server-name');
+  const iframe = document.getElementById('stream-video-iframe');
+
+  // Réinitialiser en mode Preview de base
+  if (preview) {
+    preview.classList.remove('hidden');
+    preview.style.display = 'flex';
+    preview.style.cursor = 'pointer';
+  }
+  if (activeBox) {
+    activeBox.classList.add('hidden');
+    activeBox.style.display = 'none';
+  }
+  if (iframe) iframe.src = 'about:blank';
+
+  if (previewBackdrop) {
+    const bgUrl = media.backdrop_url || media.poster_url || '';
+    previewBackdrop.style.backgroundImage = bgUrl ? `url("${bgUrl}")` : '';
+  }
+  if (previewTitle) {
+    previewTitle.textContent = `Regarder ${media.title} en HD`;
+  }
+  if (previewServer) {
+    previewServer.textContent = `${CONFIG.PROVIDERS[STATE.currentServerIndex].name} (Prêt)`;
+  }
+
+  // Lancement interactif de la lecture au clic sur les boutons Play
+  const launchPlayer = (shouldScroll = false) => {
+    startActivePlayer(shouldScroll);
   };
 
-  const playCtaBtn = document.getElementById('movie-play-now-cta-btn');
-  if (playCtaBtn) {
-    playCtaBtn.onclick = launchPlayer;
+  // Clic direct sur tout le conteneur Preview pour démarrer
+  if (preview) {
+    preview.onclick = (e) => {
+      e.stopPropagation();
+      launchPlayer(false);
+    };
   }
 
+  // 1. Bouton Play géant de la section Preview (Dans le lecteur)
+  const videoPreviewPlayBtn = document.getElementById('video-preview-play-btn');
+  if (videoPreviewPlayBtn) {
+    videoPreviewPlayBtn.onclick = (e) => {
+      e.stopPropagation();
+      launchPlayer(false);
+    };
+  }
+
+  // 2. Bouton Play Now CTA principal
+  const playCtaBtn = document.getElementById('movie-play-now-cta-btn');
+  if (playCtaBtn) {
+    playCtaBtn.onclick = (e) => {
+      e.stopPropagation();
+      launchPlayer(true);
+    };
+  }
+
+  // 3. Clic sur la carte affiche
   const posterCardWrap = document.querySelector('.movie-poster-card-wrap');
   if (posterCardWrap) {
     posterCardWrap.style.cursor = 'pointer';
-    posterCardWrap.onclick = launchPlayer;
+    posterCardWrap.onclick = (e) => {
+      e.stopPropagation();
+      launchPlayer(true);
+    };
+  }
+
+  // 4. Boutons Ouvrir en Plein Écran / Nouvel Onglet (Bypass restrictions iframe)
+  const openExternalBtn = document.getElementById('btn-open-external-tab');
+  if (openExternalBtn) {
+    openExternalBtn.onclick = (e) => {
+      e.stopPropagation();
+      const url = getStreamUrl();
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+        showToast('Ouverture du lecteur externe en plein écran');
+      }
+    };
+  }
+
+  const helperOpenTabBtn = document.getElementById('btn-helper-open-tab');
+  if (helperOpenTabBtn) {
+    helperOpenTabBtn.onclick = (e) => {
+      e.stopPropagation();
+      const url = getStreamUrl();
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+        showToast('Ouverture du flux en plein écran');
+      }
+    };
   }
 
   // Boutons de serveurs
   renderServerPills();
-  updateIframeSource();
 
   // Actions
   const addListBtn = document.getElementById('modal-add-list-btn');
@@ -996,7 +1083,7 @@ async function openStreamModal(media, season = 1, episode = 1) {
       const nextServer = result?.recommendedServerIndex ?? ((STATE.currentServerIndex + 1) % CONFIG.PROVIDERS.length);
       STATE.currentServerIndex = nextServer;
       renderServerPills();
-      updateIframeSource();
+      startActivePlayer(false);
 
       reportBtn.disabled = false;
       reportBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> <span>Signaler Flux</span>';
@@ -1032,6 +1119,80 @@ async function openStreamModal(media, season = 1, episode = 1) {
     season: STATE.currentSeason,
     episode: STATE.currentEpisode
   });
+}
+
+function getStreamUrl() {
+  if (!STATE.currentMedia) return '';
+  const provider = CONFIG.PROVIDERS[STATE.currentServerIndex] || CONFIG.PROVIDERS[0];
+  
+  // Récupération intelligente de l'ID TMDB
+  let tmdbId = STATE.currentMedia.tmdb_id;
+  if (!tmdbId && STATE.currentMedia.id) {
+    const digits = String(STATE.currentMedia.id).match(/\d+/);
+    if (digits) tmdbId = digits[0];
+  }
+  if (!tmdbId) {
+    tmdbId = '693134'; // ID de secours
+  }
+
+  const isTv = STATE.currentMedia.type === 'tv';
+  let url = isTv ? provider.tv : provider.movie;
+  return url
+    .replace('{tmdb_id}', tmdbId)
+    .replace('{season}', STATE.currentSeason || 1)
+    .replace('{episode}', STATE.currentEpisode || 1);
+}
+
+function startActivePlayer(shouldScroll = false) {
+  const preview = document.getElementById('stream-player-preview');
+  const activeBox = document.getElementById('stream-player-active');
+  const loader = document.getElementById('stream-iframe-loader');
+  const iframe = document.getElementById('stream-video-iframe');
+
+  // Masquer explicitement le preview
+  if (preview) {
+    preview.classList.add('hidden');
+    preview.style.display = 'none';
+    preview.style.pointerEvents = 'none';
+  }
+
+  // Afficher explicitement le conteneur actif et le loader
+  if (activeBox) {
+    activeBox.classList.remove('hidden');
+    activeBox.style.display = 'block';
+  }
+  if (loader) {
+    loader.classList.remove('hidden');
+    loader.style.display = 'flex';
+  }
+
+  const streamUrl = getStreamUrl();
+  if (iframe && streamUrl) {
+    iframe.src = streamUrl;
+    iframe.onload = () => {
+      if (loader) {
+        loader.classList.add('hidden');
+        loader.style.display = 'none';
+      }
+    };
+    setTimeout(() => {
+      if (loader) {
+        loader.classList.add('hidden');
+        loader.style.display = 'none';
+      }
+    }, 2500);
+  }
+
+  if (shouldScroll) {
+    const playerSection = document.getElementById('movie-player-section');
+    if (playerSection) {
+      playerSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }
+
+  if (STATE.currentMedia) {
+    showToast(`Lecture lancée : ${STATE.currentMedia.title} (1080P)`);
+  }
 }
 
 async function renderMoreLikeThis(currentMedia) {
@@ -1118,8 +1279,18 @@ function renderServerPills() {
       container.querySelectorAll('.server-pill').forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       STATE.currentServerIndex = Number(btn.dataset.idx);
-      updateIframeSource();
-      showToast(`Serveur actif : ${CONFIG.PROVIDERS[STATE.currentServerIndex].name}`);
+
+      // Si le lecteur est déjà actif, relancer le nouveau serveur
+      const activeBox = document.getElementById('stream-player-active');
+      if (activeBox && !activeBox.classList.contains('hidden')) {
+        startActivePlayer(false);
+      } else {
+        const previewServer = document.getElementById('preview-active-server-name');
+        if (previewServer) {
+          previewServer.textContent = `${CONFIG.PROVIDERS[STATE.currentServerIndex].name} (Prêt)`;
+        }
+      }
+      showToast(`Serveur sélectionné : ${CONFIG.PROVIDERS[STATE.currentServerIndex].name}`);
     });
   });
 }
@@ -1127,18 +1298,8 @@ function renderServerPills() {
 function updateIframeSource() {
   const iframe = document.getElementById('stream-video-iframe');
   if (!iframe || !STATE.currentMedia) return;
-
-  const provider = CONFIG.PROVIDERS[STATE.currentServerIndex] || CONFIG.PROVIDERS[0];
-  const tmdbId = STATE.currentMedia.tmdb_id || String(STATE.currentMedia.id).replace(/^[a-z]+-/, '');
-  const isTv = STATE.currentMedia.type === 'tv';
-
-  let url = isTv ? provider.tv : provider.movie;
-  url = url
-    .replace('{tmdb_id}', tmdbId)
-    .replace('{season}', STATE.currentSeason || 1)
-    .replace('{episode}', STATE.currentEpisode || 1);
-
-  iframe.src = url;
+  const url = getStreamUrl();
+  if (url) iframe.src = url;
 }
 
 async function setupSeriesEpisodes(media) {
@@ -1179,7 +1340,7 @@ async function setupSeriesEpisodes(media) {
         grid.querySelectorAll('.ep-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         STATE.currentEpisode = Number(btn.dataset.ep);
-        updateIframeSource();
+        startActivePlayer(false);
         showToast(`Lecture S${STATE.currentSeason}:E${STATE.currentEpisode}`);
       });
     });
