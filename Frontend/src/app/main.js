@@ -750,6 +750,33 @@ async function openStreamModal(media, season = 1, episode = 1) {
     };
   }
 
+  const reportBtn = document.getElementById('modal-report-btn');
+  if (reportBtn) {
+    reportBtn.onclick = async () => {
+      const currentProv = CONFIG.PROVIDERS[STATE.currentServerIndex] || CONFIG.PROVIDERS[0];
+      reportBtn.disabled = true;
+      reportBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Signalement...</span>';
+      
+      const result = await SupabaseService.reportBrokenStream({
+        tmdb_id: media.tmdb_id || media.id,
+        media_title: media.title,
+        server_name: currentProv.name,
+        server_index: STATE.currentServerIndex,
+        error_type: 'playback_error',
+        details: 'Signalement utilisateur depuis le lecteur'
+      });
+
+      const nextServer = result?.recommendedServerIndex ?? ((STATE.currentServerIndex + 1) % CONFIG.PROVIDERS.length);
+      STATE.currentServerIndex = nextServer;
+      renderServerPills();
+      updateIframeSource();
+
+      reportBtn.disabled = false;
+      reportBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> <span>Signaler Flux</span>';
+      showToast(`Signalement envoyé ! Basculement automatique sur ${CONFIG.PROVIDERS[nextServer].name}`);
+    };
+  }
+
   // Tags audio doublages
   document.querySelectorAll('.dub-tag').forEach(tag => {
     tag.onclick = () => {
@@ -875,14 +902,14 @@ function updateIframeSource() {
   if (!iframe || !STATE.currentMedia) return;
 
   const provider = CONFIG.PROVIDERS[STATE.currentServerIndex] || CONFIG.PROVIDERS[0];
-  const tmdbId = STATE.currentMedia.tmdb_id;
+  const tmdbId = STATE.currentMedia.tmdb_id || String(STATE.currentMedia.id).replace(/^[a-z]+-/, '');
   const isTv = STATE.currentMedia.type === 'tv';
 
   let url = isTv ? provider.tv : provider.movie;
   url = url
     .replace('{tmdb_id}', tmdbId)
-    .replace('{season}', STATE.currentSeason)
-    .replace('{episode}', STATE.currentEpisode);
+    .replace('{season}', STATE.currentSeason || 1)
+    .replace('{episode}', STATE.currentEpisode || 1);
 
   iframe.src = url;
 }
@@ -1002,7 +1029,9 @@ function setupNavigation() {
         SupabaseService.getFavorites().then(favs => {
           let favItems = [];
           if (favs && favs.length > 0) {
-            favItems = STATE.allMediaList.filter(m => favs.some(f => f.media_id === m.id));
+            favItems = STATE.allMediaList.filter(m => 
+              favs.some(f => (typeof f === 'string' ? (f === String(m.id) || f === String(m.tmdb_id)) : (f.media_id === String(m.id) || f.media_id === String(m.tmdb_id))))
+            );
           }
           if (favItems.length === 0) {
             favItems = STATE.allMediaList.slice(0, 6);
