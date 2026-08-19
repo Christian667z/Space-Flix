@@ -27,24 +27,32 @@
       // { name: 'Mon fournisseur', movie: 'https://.../movie/{tmdb_id}', tv: 'https://.../tv/{tmdb_id}/{season}/{episode}' }
       AUTHORIZED_EMBED_PROVIDERS: [
         {
-          name: 'Serveur 1 - VidLink Pro (Super Rapide)',
-          movie: 'https://vidlink.pro/movie/{tmdb_id}?primaryColor=ff0000',
-          tv: 'https://vidlink.pro/tv/{tmdb_id}/{season}/{episode}?primaryColor=ff0000'
-        },
-        {
-          name: 'Serveur 2 - VidSrc CC',
-          movie: 'https://vidsrc.cc/v2/embed/movie/{tmdb_id}?autoPlay=false',
-          tv: 'https://vidsrc.cc/v2/embed/tv/{tmdb_id}/{season}/{episode}'
-        },
-        {
-          name: 'Serveur 3 - AutoEmbed CC',
-          movie: 'https://player.autoembed.cc/embed/movie/{tmdb_id}',
-          tv: 'https://player.autoembed.cc/embed/tv/{tmdb_id}/{season}/{episode}'
-        },
-        {
-          name: 'Serveur 4 - SuperEmbed',
+          name: 'Serveur 1 - MultiEmbed (Priorité VF / Multi-Audio)',
           movie: 'https://multiembed.mov/?video_id={tmdb_id}&tmdb=1',
-          tv: 'https://multiembed.mov/?video_id={tmdb_id}&tmdb=1&s={season}&e={episode}'
+          tv: 'https://multiembed.mov/?video_id={tmdb_id}&tmdb=1&s={season}&e={episode}',
+          quality: '1080p',
+          lang: 'VF / Multi'
+        },
+        {
+          name: 'Serveur 2 - VidLink Pro (VF / STFR Automatique)',
+          movie: 'https://vidlink.pro/movie/{tmdb_id}?primaryColor=e50914&subtitles=fre,fra,fr',
+          tv: 'https://vidlink.pro/tv/{tmdb_id}/{season}/{episode}?primaryColor=e50914&subtitles=fre,fra,fr',
+          quality: '1080p',
+          lang: 'VF / VOSTFR'
+        },
+        {
+          name: 'Serveur 3 - VidSrc CC (HD Multi-Audio)',
+          movie: 'https://vidsrc.cc/v2/embed/movie/{tmdb_id}?autoPlay=false',
+          tv: 'https://vidsrc.cc/v2/embed/tv/{tmdb_id}/{season}/{episode}',
+          quality: '1080p',
+          lang: 'Multi HD'
+        },
+        {
+          name: 'Serveur 4 - AutoEmbed (Lecteur Alternatif)',
+          movie: 'https://player.autoembed.cc/embed/movie/{tmdb_id}',
+          tv: 'https://player.autoembed.cc/embed/tv/{tmdb_id}/{season}/{episode}',
+          quality: '1080p',
+          lang: 'VF / Multi'
         }
       ]
     };
@@ -523,10 +531,11 @@
           <!-- OVERLAY ERREUR DE FLUX -->
           <div id="player-error-overlay" class="player-error-overlay hidden">
             <i class="fa-solid fa-triangle-exclamation error-icon"></i>
-            <h3 class="error-title">Erreur de chargement du flux vidéo</h3>
-            <p class="error-desc">Ce serveur rencontre un problème temporaire. Essayez un serveur alternatif ci-dessous.</p>
+            <h3 class="error-title">Flux en cours de synchronisation</h3>
+            <p class="error-desc">Si ce serveur met du temps à charger ou est restreint par votre navigateur, basculez sur un serveur alternatif ou ouvrez la source directe.</p>
             <div class="error-actions">
               <button id="btn-error-switch-server" class="btn-error-action"><i class="fa-solid fa-rotate"></i> Prochain serveur</button>
+              <a id="btn-error-open-external" class="btn-error-action" target="_blank" rel="noopener noreferrer"><i class="fa-solid fa-arrow-up-right-from-square"></i> Ouvrir la source directe</a>
               <button id="btn-error-watch-trailer" class="btn-error-action btn-secondary"><i class="fa-solid fa-film"></i> Bande-annonce</button>
             </div>
           </div>

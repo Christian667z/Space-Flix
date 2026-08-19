@@ -57,19 +57,56 @@ const handleZipDownload = (req, res) => {
 app.get('/download-zip', handleZipDownload);
 app.get('/api/download-zip', handleZipDownload);
 
+// Proxy TMDB API sécurisé côté serveur
+app.get('/api/tmdb/*', async (req, res) => {
+  try {
+    const tmdbPath = req.params[0] || '';
+    const apiKey = process.env.TMDB_API_KEY || '4a53239a5ffacda5b630ad805ef96e1a';
+    
+    const url = new URL(`https://api.themoviedb.org/3/${tmdbPath}`);
+    url.searchParams.set('api_key', apiKey);
+    if (!req.query.language) {
+      url.searchParams.set('language', 'fr-FR');
+    }
+    
+    for (const [key, value] of Object.entries(req.query)) {
+      if (value !== undefined && value !== null && key !== 'api_key') {
+        url.searchParams.set(key, String(value));
+      }
+    }
+
+    const response = await fetch(url.toString(), {
+      headers: {
+        'Accept': 'application/json',
+        'User-Agent': 'SpaceFlix/2.5'
+      }
+    });
+
+    const data = await response.json();
+    res.status(response.status).json(data);
+  } catch (err) {
+    console.error('TMDB Proxy Error:', err);
+    res.status(500).json({ error: 'Failed to proxy request to TMDB', message: err.message });
+  }
+});
+
 // Serve static assets from Frontend directory
 app.use(express.static(path.join(__dirname, 'Frontend')));
 
-// Specific routes for legal/about pages if accessed directly without .html
-app.get('/about', (req, res) => {
+// Specific routes for legal/about/filters pages if accessed directly without .html
+app.get(['/filters', '/filters.html'], (req, res) => {
+  res.sendFile(path.join(__dirname, 'Frontend', 'filters.html'));
+});
+
+app.get(['/about', '/about.html', '/a_propos', '/a_propos.html'], (req, res) => {
   res.sendFile(path.join(__dirname, 'Frontend', 'about.html'));
 });
 
-app.get('/privacy', (req, res) => {
+app.get(['/privacy', '/privacy.html', '/confidentialite', '/confidentialite.html'], (req, res) => {
   res.sendFile(path.join(__dirname, 'Frontend', 'privacy.html'));
 });
 
-app.get('/terms', (req, res) => {
+app.get(['/terms', '/terms.html', '/conditions', '/conditions.html'], (req, res) => {
   res.sendFile(path.join(__dirname, 'Frontend', 'terms.html'));
 });
 

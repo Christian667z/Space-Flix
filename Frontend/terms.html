@@ -145,7 +145,7 @@
           <span class="sc-logo-name">SpaceFlix</span>
         </div>
         <p class="sc-brand-desc">
-          La plateforme moderne de streaming HD gratuit pour accélérer votre divertissement et regarder vos films & séries préférés sans pub ni abonnement.
+          La plateforme moderne de streaming HD gratuit avec reprise de lecture automatique pour regarder vos films & séries préférés en VF/VOSTFR.
         </p>
 
         <!-- DEVELOPER CARD BOX -->
@@ -162,13 +162,14 @@
       <div class="sc-footer-col">
         <h4 class="sc-col-title"><i class="fa-solid fa-compass"></i> NAVIGATION</h4>
         <ul class="sc-footer-links">
-          <li><a href="index.html"><i class="fa-solid fa-chevron-right sc-arrow"></i> Accueil</a></li>
-          <li><a href="index.html#trending"><i class="fa-solid fa-chevron-right sc-arrow"></i> Nouveautés & Top 10</a></li>
-          <li><a href="index.html#movies"><i class="fa-solid fa-chevron-right sc-arrow"></i> Catalogue Films</a></li>
-          <li><a href="index.html#tv"><i class="fa-solid fa-chevron-right sc-arrow"></i> Séries TV HD</a></li>
+          <li><a href="index.html" data-nav="home"><i class="fa-solid fa-chevron-right sc-arrow"></i> Accueil</a></li>
+          <li><a href="index.html#trending" data-nav="trending"><i class="fa-solid fa-chevron-right sc-arrow"></i> Nouveautés & Top 10</a></li>
+          <li><a href="index.html#movies" data-nav="movies"><i class="fa-solid fa-chevron-right sc-arrow"></i> Catalogue Films</a></li>
+          <li><a href="index.html#tv" data-nav="tv"><i class="fa-solid fa-chevron-right sc-arrow"></i> Séries TV HD</a></li>
+          <li><a href="filters.html"><i class="fa-solid fa-chevron-right sc-arrow"></i> Filtres Avancés</a></li>
           <li><a href="about.html"><i class="fa-solid fa-chevron-right sc-arrow"></i> À Propos de Space</a></li>
-          <li><a href="privacy.html"><i class="fa-solid fa-chevron-right sc-arrow"></i> Confidentialité</a></li>
-          <li><a href="terms.html"><i class="fa-solid fa-chevron-right sc-arrow"></i> Conditions Générales</a></li>
+          <li><a href="privacy.html" id="footer-privacy-btn"><i class="fa-solid fa-chevron-right sc-arrow"></i> Confidentialité</a></li>
+          <li><a href="terms.html" id="footer-terms-btn"><i class="fa-solid fa-chevron-right sc-arrow"></i> Conditions Générales</a></li>
         </ul>
       </div>
 
@@ -191,11 +192,6 @@
               <i class="fa-regular fa-envelope sc-eco-icon"></i> Email (ogspacetech@gmail.com)
             </a>
           </li>
-          <li>
-            <a href="https://wa.me/50946966290" target="_blank">
-              <i class="fa-solid fa-users sc-eco-icon"></i> Groupe WhatsApp Officiel
-            </a>
-          </li>
         </ul>
       </div>
 
@@ -204,7 +200,7 @@
         <h4 class="sc-col-title"><i class="fa-solid fa-shield-halved"></i> ENGAGEMENTS</h4>
         <div class="sc-engagements-grid">
           <a href="privacy.html" style="text-decoration: none;">
-            <div class="sc-pill-badge">
+            <div class="sc-pill-badge" id="pill-privacy-trigger">
               <i class="fa-solid fa-lock sc-pill-icon"></i> Confidentialité Sécurisée
             </div>
           </a>
@@ -212,10 +208,7 @@
             <i class="fa-solid fa-bolt sc-pill-icon"></i> Multi-Serveurs HD VF/VOSTFR
           </div>
           <div class="sc-pill-badge">
-            <i class="fa-solid fa-film sc-pill-icon"></i> Catalogue Mis à Jour 24/7
-          </div>
-          <div class="sc-pill-badge">
-            <i class="fa-solid fa-globe sc-pill-icon"></i> 100% Gratuit & Illimité
+            <i class="fa-solid fa-clock-rotate-left sc-pill-icon"></i> Reprise de Lecture Auto
           </div>
         </div>
       </div>
@@ -234,9 +227,9 @@
       </div>
 
       <div class="sc-bottom-right">
-        <a href="privacy.html"><i class="fa-solid fa-user-shield"></i> Confidentialité</a>
+        <a href="privacy.html" id="bottom-privacy-btn"><i class="fa-solid fa-user-shield"></i> Confidentialité</a>
         <span class="sc-dot">•</span>
-        <a href="terms.html"><i class="fa-solid fa-scale-balanced"></i> Conditions Générales</a>
+        <a href="terms.html" id="bottom-terms-btn"><i class="fa-solid fa-scale-balanced"></i> Conditions Générales</a>
       </div>
     </div>
   </footer>

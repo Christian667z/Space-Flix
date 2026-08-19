@@ -13,28 +13,63 @@ const headers = {
 };
 
 /**
- * Génère un poster SVG de secours élégant au style néon spatial SpaceFlix
+ * Fonction de requête TMDB résiliente : tente le proxy serveur /api/tmdb/ en priorité, avec fallback direct
+ */
+async function fetchFromTMDB(path, queryParams = {}) {
+  const cleanPath = path.replace(/^\//, '');
+  
+  // 1. Essai via le proxy sécurisé du serveur
+  try {
+    const proxyUrl = new URL(`/api/tmdb/${cleanPath}`, window.location.origin);
+    for (const [k, v] of Object.entries(queryParams)) {
+      if (v !== undefined && v !== null && v !== '') {
+        proxyUrl.searchParams.set(k, String(v));
+      }
+    }
+    const res = await fetch(proxyUrl.toString(), { headers });
+    if (res.ok) return await res.json();
+  } catch (err) {
+    // Si proxy indisponible (client-only), fallback direct
+  }
+
+  // 2. Fallback direct vers api.themoviedb.org
+  const directUrl = new URL(`${TMDB_BASE_URL}/${cleanPath}`);
+  directUrl.searchParams.set('api_key', TMDB_API_KEY);
+  if (!queryParams.language) directUrl.searchParams.set('language', 'fr-FR');
+  for (const [k, v] of Object.entries(queryParams)) {
+    if (v !== undefined && v !== null && v !== '') {
+      directUrl.searchParams.set(k, String(v));
+    }
+  }
+
+  const res = await fetch(directUrl.toString(), { headers });
+  if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
+  return await res.json();
+}
+
+/**
+ * Génère un poster SVG de secours élégant au style cinéma Rouge & Noir SpaceFlix
  */
 export function getFallbackPoster(title = 'Film SpaceFlix', year = '2026') {
   const safeTitle = String(title || 'Film HD').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').slice(0, 26);
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="500" height="750" viewBox="0 0 500 750">
     <defs>
       <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stop-color="#0b0813"/>
-        <stop offset="50%" stop-color="#060919"/>
-        <stop offset="100%" stop-color="#020308"/>
+        <stop offset="0%" stop-color="#140406"/>
+        <stop offset="50%" stop-color="#0a0304"/>
+        <stop offset="100%" stop-color="#000000"/>
       </linearGradient>
       <radialGradient id="glow" cx="50%" cy="35%" r="55%">
-        <stop offset="0%" stop-color="#6c5ce7" stop-opacity="0.45"/>
-        <stop offset="100%" stop-color="#00f2fe" stop-opacity="0"/>
+        <stop offset="0%" stop-color="#E50914" stop-opacity="0.45"/>
+        <stop offset="100%" stop-color="#000000" stop-opacity="0"/>
       </radialGradient>
     </defs>
     <rect width="500" height="750" fill="url(#bg)"/>
     <circle cx="250" cy="270" r="180" fill="url(#glow)"/>
-    <rect x="200" y="220" width="100" height="100" rx="20" fill="rgba(108,92,231,0.2)" stroke="#a29bfe" stroke-width="2"/>
-    <path d="M240 250 L275 270 L240 290 Z" fill="#00f2fe"/>
+    <rect x="200" y="220" width="100" height="100" rx="20" fill="rgba(229,9,20,0.2)" stroke="#E50914" stroke-width="2"/>
+    <path d="M240 250 L275 270 L240 290 Z" fill="#ffffff"/>
     <text x="250" y="470" font-family="system-ui, -apple-system, sans-serif" font-weight="800" font-size="28" fill="#ffffff" text-anchor="middle">${safeTitle}</text>
-    <text x="250" y="515" font-family="system-ui, -apple-system, sans-serif" font-weight="600" font-size="18" fill="#00f2fe" text-anchor="middle">${year} • SPACEFLIX HD</text>
+    <text x="250" y="515" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="18" fill="#E50914" text-anchor="middle">${year} • SPACEFLIX HD</text>
   </svg>`;
   return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
 }
@@ -92,10 +127,10 @@ export function formatTMDBMedia(item, mediaType = 'movie') {
     is_trending: (item.popularity || 0) > 40,
     is_featured: false,
     video_servers: isMovie ? [
-      { name: 'Serveur VF 1 (HD)', url: `https://vidsrc.to/embed/movie/${id}`, quality: '1080p', lang: 'VF' },
-      { name: 'Serveur VF 2 (Rapide)', url: `https://vidsrc.me/embed/movie?tmdb=${id}`, quality: '1080p', lang: 'VF' },
-      { name: 'Serveur VOSTFR (HD)', url: `https://vidsrc.cc/v2/embed/movie/${id}`, quality: '1080p', lang: 'VOSTFR' },
-      { name: 'Serveur 4 (SuperEmbed)', url: `https://multiembed.mov/?video_id=${id}&tmdb=1`, quality: '1080p', lang: 'VF/VOSTFR' }
+      { name: 'Serveur 1 (MultiEmbed VF / Multi)', url: `https://multiembed.mov/?video_id=${id}&tmdb=1`, quality: '1080p', lang: 'VF / Multi' },
+      { name: 'Serveur 2 (VidLink VF / STFR)', url: `https://vidlink.pro/movie/${id}?primaryColor=e50914&subtitles=fre,fra,fr`, quality: '1080p', lang: 'VF / VOSTFR' },
+      { name: 'Serveur 3 (VidSrc CC HD)', url: `https://vidsrc.cc/v2/embed/movie/${id}?autoPlay=false`, quality: '1080p', lang: 'Multi HD' },
+      { name: 'Serveur 4 (AutoEmbed Rapide)', url: `https://player.autoembed.cc/embed/movie/${id}`, quality: '1080p', lang: 'VF / Multi' }
     ] : [],
     seasons: !isMovie ? [
       {
@@ -107,10 +142,10 @@ export function formatTMDBMedia(item, mediaType = 'movie') {
             synopsis: item.overview || 'Début de la saison.',
             still_path: backdrop_url,
             video_servers: [
-              { name: 'Serveur VF 1', url: `https://vidsrc.to/embed/tv/${id}/1/1`, quality: '1080p', lang: 'VF' },
-              { name: 'Serveur VF 2', url: `https://vidsrc.me/embed/tv?tmdb=${id}&season=1&episode=1`, quality: '1080p', lang: 'VF' },
-              { name: 'Serveur VOSTFR', url: `https://vidsrc.cc/v2/embed/tv/${id}/1/1`, quality: '1080p', lang: 'VOSTFR' },
-              { name: 'Serveur 4 Multi', url: `https://multiembed.mov/?video_id=${id}&tmdb=1&s=1&e=1`, quality: '1080p', lang: 'VF/VOSTFR' }
+              { name: 'Serveur 1 (MultiEmbed VF / Multi)', url: `https://multiembed.mov/?video_id=${id}&tmdb=1&s=1&e=1`, quality: '1080p', lang: 'VF / Multi' },
+              { name: 'Serveur 2 (VidLink VF / STFR)', url: `https://vidlink.pro/tv/${id}/1/1?primaryColor=e50914&subtitles=fre,fra,fr`, quality: '1080p', lang: 'VF / VOSTFR' },
+              { name: 'Serveur 3 (VidSrc CC HD)', url: `https://vidsrc.cc/v2/embed/tv/${id}/1/1`, quality: '1080p', lang: 'Multi HD' },
+              { name: 'Serveur 4 (AutoEmbed)', url: `https://player.autoembed.cc/embed/tv/${id}/1/1`, quality: '1080p', lang: 'VF / Multi' }
             ]
           },
           {
@@ -119,8 +154,9 @@ export function formatTMDBMedia(item, mediaType = 'movie') {
             synopsis: 'La suite palpitante des aventures.',
             still_path: backdrop_url,
             video_servers: [
-              { name: 'Serveur VF 1', url: `https://vidsrc.to/embed/tv/${id}/1/2`, quality: '1080p', lang: 'VF' },
-              { name: 'Serveur VOSTFR', url: `https://vidsrc.cc/v2/embed/tv/${id}/1/2`, quality: '1080p', lang: 'VOSTFR' }
+              { name: 'Serveur 1 (MultiEmbed VF / Multi)', url: `https://multiembed.mov/?video_id=${id}&tmdb=1&s=1&e=2`, quality: '1080p', lang: 'VF / Multi' },
+              { name: 'Serveur 2 (VidLink VF / STFR)', url: `https://vidlink.pro/tv/${id}/1/2?primaryColor=e50914&subtitles=fre,fra,fr`, quality: '1080p', lang: 'VF / VOSTFR' },
+              { name: 'Serveur 3 (VidSrc CC HD)', url: `https://vidsrc.cc/v2/embed/tv/${id}/1/2`, quality: '1080p', lang: 'Multi HD' }
             ]
           },
           {
@@ -129,8 +165,9 @@ export function formatTMDBMedia(item, mediaType = 'movie') {
             synopsis: 'Le dénouement se prépare.',
             still_path: backdrop_url,
             video_servers: [
-              { name: 'Serveur VF 1', url: `https://vidsrc.to/embed/tv/${id}/1/3`, quality: '1080p', lang: 'VF' },
-              { name: 'Serveur VOSTFR', url: `https://vidsrc.cc/v2/embed/tv/${id}/1/3`, quality: '1080p', lang: 'VOSTFR' }
+              { name: 'Serveur 1 (MultiEmbed VF / Multi)', url: `https://multiembed.mov/?video_id=${id}&tmdb=1&s=1&e=3`, quality: '1080p', lang: 'VF / Multi' },
+              { name: 'Serveur 2 (VidLink VF / STFR)', url: `https://vidlink.pro/tv/${id}/1/3?primaryColor=e50914&subtitles=fre,fra,fr`, quality: '1080p', lang: 'VF / VOSTFR' },
+              { name: 'Serveur 3 (VidSrc CC HD)', url: `https://vidsrc.cc/v2/embed/tv/${id}/1/3`, quality: '1080p', lang: 'Multi HD' }
             ]
           }
         ]
@@ -172,9 +209,7 @@ export const TMDBService = {
 
   async getTrending(mediaType = 'all', timeWindow = 'week') {
     try {
-      const res = await fetch(`${TMDB_BASE_URL}/trending/${mediaType}/${timeWindow}?api_key=${TMDB_API_KEY}&language=fr-FR`, { headers });
-      if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await fetchFromTMDB(`trending/${mediaType}/${timeWindow}`, { language: 'fr-FR' });
       return (data.results || []).map(item => formatTMDBMedia(item, item.media_type || mediaType)).filter(Boolean);
     } catch (err) {
       console.warn("Info TMDB getTrending:", err.message);
@@ -184,9 +219,7 @@ export const TMDBService = {
 
   async getPopularMovies(page = 1) {
     try {
-      const res = await fetch(`${TMDB_BASE_URL}/movie/popular?api_key=${TMDB_API_KEY}&language=fr-FR&page=${page}`, { headers });
-      if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await fetchFromTMDB('movie/popular', { language: 'fr-FR', page: String(page) });
       return (data.results || []).map(item => formatTMDBMedia(item, 'movie')).filter(Boolean);
     } catch (err) {
       console.warn("Info TMDB getPopularMovies:", err.message);
@@ -196,9 +229,7 @@ export const TMDBService = {
 
   async getPopularTVShows(page = 1) {
     try {
-      const res = await fetch(`${TMDB_BASE_URL}/tv/popular?api_key=${TMDB_API_KEY}&language=fr-FR&page=${page}`, { headers });
-      if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await fetchFromTMDB('tv/popular', { language: 'fr-FR', page: String(page) });
       return (data.results || []).map(item => formatTMDBMedia(item, 'tv')).filter(Boolean);
     } catch (err) {
       console.warn("Info TMDB getPopularTVShows:", err.message);
@@ -209,9 +240,7 @@ export const TMDBService = {
   async searchMedia(query) {
     if (!query) return [];
     try {
-      const res = await fetch(`${TMDB_BASE_URL}/search/multi?api_key=${TMDB_API_KEY}&language=fr-FR&query=${encodeURIComponent(query)}`, { headers });
-      if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await fetchFromTMDB('search/multi', { language: 'fr-FR', query: query });
       return (data.results || [])
         .filter(item => item.media_type === 'movie' || item.media_type === 'tv')
         .map(item => formatTMDBMedia(item, item.media_type))
@@ -247,8 +276,8 @@ export const TMDBService = {
 
     try {
       const [resMovie, resTV] = await Promise.allSettled([
-        fetch(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=fr-FR&with_genres=${genreId}&sort_by=popularity.desc`, { headers }).then(r => r.json()),
-        fetch(`${TMDB_BASE_URL}/discover/tv?api_key=${TMDB_API_KEY}&language=fr-FR&with_genres=${genreId}&sort_by=popularity.desc`, { headers }).then(r => r.json())
+        fetchFromTMDB('discover/movie', { language: 'fr-FR', with_genres: String(genreId), sort_by: 'popularity.desc' }),
+        fetchFromTMDB('discover/tv', { language: 'fr-FR', with_genres: String(genreId), sort_by: 'popularity.desc' })
       ]);
 
       const movieResults = resMovie.status === 'fulfilled' ? (resMovie.value?.results || []) : [];
@@ -277,36 +306,45 @@ export const TMDBService = {
 
     const genreId = genre && genre !== 'Tous' ? genreMap[genre] : null;
 
-    let sortParam = sortBy || 'popularity.desc';
-    let minVotes = sortParam.includes('vote_average') ? '&vote_count.gte=50' : '';
+    const sortParam = sortBy || 'popularity.desc';
+    const minVotes = sortParam.includes('vote_average') ? 50 : undefined;
 
-    let langFilter = '';
-    if (lang === 'fr') langFilter = '&with_original_language=fr';
-    else if (lang === 'en') langFilter = '&with_original_language=en';
-    else if (lang === 'ht') langFilter = '&with_original_language=ht';
+    // Ne restreindre with_original_language que si explicitement demandé (ex. cinéma purement francophone)
+    let withOriginalLang = undefined;
+    if (lang === 'vo_fr') withOriginalLang = 'fr';
+    else if (lang === 'en') withOriginalLang = 'en';
+    else if (lang === 'ht') withOriginalLang = 'ht';
 
-    let yearMovieParam = year && year !== 'all' ? `&primary_release_year=${year}` : '';
-    let yearTVParam = year && year !== 'all' ? `&first_air_date_year=${year}` : '';
-    let genreParam = genreId ? `&with_genres=${genreId}` : '';
+    const commonParams = {
+      sort_by: sortParam,
+      language: 'fr-FR',
+      page: String(page)
+    };
+    if (minVotes) commonParams['vote_count.gte'] = String(minVotes);
+    if (genreId) commonParams['with_genres'] = String(genreId);
+    if (withOriginalLang) commonParams['with_original_language'] = withOriginalLang;
 
     try {
       if (type === 'movie') {
-        const url = `${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=fr-FR&sort_by=${sortParam}${minVotes}${genreParam}${yearMovieParam}${langFilter}&page=${page}`;
-        const res = await fetch(url, { headers });
-        if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
-        const data = await res.json();
+        const movieParams = { ...commonParams };
+        if (year && year !== 'all') movieParams['primary_release_year'] = String(year);
+        const data = await fetchFromTMDB('discover/movie', movieParams);
         return (data.results || []).map(item => formatTMDBMedia(item, 'movie')).filter(Boolean);
       } else if (type === 'tv') {
-        const url = `${TMDB_BASE_URL}/discover/tv?api_key=${TMDB_API_KEY}&language=fr-FR&sort_by=${sortParam}${minVotes}${genreParam}${yearTVParam}${langFilter}&page=${page}`;
-        const res = await fetch(url, { headers });
-        if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
-        const data = await res.json();
+        const tvParams = { ...commonParams };
+        if (year && year !== 'all') tvParams['first_air_date_year'] = String(year);
+        const data = await fetchFromTMDB('discover/tv', tvParams);
         return (data.results || []).map(item => formatTMDBMedia(item, 'tv')).filter(Boolean);
       } else {
         // Combiné Movie + TV
+        const movieParams = { ...commonParams };
+        if (year && year !== 'all') movieParams['primary_release_year'] = String(year);
+        const tvParams = { ...commonParams };
+        if (year && year !== 'all') tvParams['first_air_date_year'] = String(year);
+
         const [resM, resT] = await Promise.allSettled([
-          fetch(`${TMDB_BASE_URL}/discover/movie?api_key=${TMDB_API_KEY}&language=fr-FR&sort_by=${sortParam}${minVotes}${genreParam}${yearMovieParam}${langFilter}&page=${page}`, { headers }).then(r => r.json()),
-          fetch(`${TMDB_BASE_URL}/discover/tv?api_key=${TMDB_API_KEY}&language=fr-FR&sort_by=${sortParam}${minVotes}${genreParam}${yearTVParam}${langFilter}&page=${page}`, { headers }).then(r => r.json())
+          fetchFromTMDB('discover/movie', movieParams),
+          fetchFromTMDB('discover/tv', tvParams)
         ]);
         const mList = resM.status === 'fulfilled' ? (resM.value?.results || []).map(i => formatTMDBMedia(i, 'movie')) : [];
         const tList = resT.status === 'fulfilled' ? (resT.value?.results || []).map(i => formatTMDBMedia(i, 'tv')) : [];
@@ -334,17 +372,13 @@ export const TMDBService = {
 
     try {
       // 1. Essai en français d'abord
-      let res = await fetch(`${TMDB_BASE_URL}/${type}/${cleanId}/videos?api_key=${TMDB_API_KEY}&language=fr-FR`, { headers });
-      let data = res.ok ? await res.json() : null;
+      let data = await fetchFromTMDB(`${type}/${cleanId}/videos`, { language: 'fr-FR' }).catch(() => null);
       let results = data?.results || [];
 
       // 2. Si aucune vidéo trouvée en FR, récupérer les vidéos en VO (en-US)
       if (results.length === 0) {
-        const resEn = await fetch(`${TMDB_BASE_URL}/${type}/${cleanId}/videos?api_key=${TMDB_API_KEY}&language=en-US`, { headers });
-        if (resEn.ok) {
-          const dataEn = await resEn.json();
-          results = dataEn?.results || [];
-        }
+        const dataEn = await fetchFromTMDB(`${type}/${cleanId}/videos`, { language: 'en-US' }).catch(() => null);
+        results = dataEn?.results || [];
       }
 
       // Filtrer les vidéos YouTube valides
@@ -371,9 +405,7 @@ export const TMDBService = {
     if (!tmdbId) return null;
     const cleanId = String(tmdbId).replace(/^[a-z]+-/, '');
     try {
-      const res = await fetch(`${TMDB_BASE_URL}/movie/${cleanId}?api_key=${TMDB_API_KEY}&language=fr-FR`, { headers });
-      if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
-      return await res.json();
+      return await fetchFromTMDB(`movie/${cleanId}`, { language: 'fr-FR' });
     } catch (err) {
       console.warn(`Info Movie Details (${cleanId}):`, err.message);
       return null;
@@ -387,9 +419,11 @@ export const TMDBService = {
     if (!tmdbId) return null;
     const cleanId = String(tmdbId).replace(/^[a-z]+-/, '');
     try {
-      const res = await fetch(`${TMDB_BASE_URL}/tv/${cleanId}?api_key=${TMDB_API_KEY}&language=fr-FR`, { headers });
-      if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
-      return await res.json();
+      let data = await fetchFromTMDB(`tv/${cleanId}`, { language: 'fr-FR' }).catch(() => null);
+      if (!data) {
+        data = await fetchFromTMDB(`tv/${cleanId}`, { language: 'en-US' }).catch(() => null);
+      }
+      return data;
     } catch (err) {
       console.warn(`Info TV Details (${cleanId}):`, err.message);
       return null;
@@ -403,15 +437,19 @@ export const TMDBService = {
     if (!tmdbId) return [];
     const cleanId = String(tmdbId).replace(/^[a-z]+-/, '');
     try {
-      const res = await fetch(`${TMDB_BASE_URL}/tv/${cleanId}/season/${seasonNumber}?api_key=${TMDB_API_KEY}&language=fr-FR`, { headers });
-      if (!res.ok) throw new Error(`TMDB HTTP ${res.status}`);
-      const data = await res.json();
-      return (data.episodes || []).map(ep => ({
+      let data = await fetchFromTMDB(`tv/${cleanId}/season/${seasonNumber}`, { language: 'fr-FR' }).catch(() => null);
+      if (!data) {
+        data = await fetchFromTMDB(`tv/${cleanId}/season/${seasonNumber}`, { language: 'en-US' }).catch(() => null);
+      }
+      return (data?.episodes || []).map(ep => ({
         episode_number: ep.episode_number,
+        name: ep.name || `Épisode ${ep.episode_number}`,
         title: ep.name || `Épisode ${ep.episode_number}`,
-        synopsis: ep.overview || 'Synopsis de l\'épisode disponible en streaming.',
+        synopsis: ep.overview || 'Épisode complet disponible en streaming HD.',
+        overview: ep.overview || 'Épisode complet disponible en streaming HD.',
         still_path: ep.still_path ? `https://image.tmdb.org/t/p/w500${ep.still_path}` : null,
-        vote_average: ep.vote_average ? Number(ep.vote_average).toFixed(1) : '8.0'
+        vote_average: ep.vote_average ? Number(ep.vote_average).toFixed(1) : '8.0',
+        air_date: ep.air_date
       }));
     } catch (err) {
       console.warn(`Info TV Season (${cleanId} S${seasonNumber}):`, err.message);
