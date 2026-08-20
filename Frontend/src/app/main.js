@@ -1,5 +1,5 @@
 /**
- * HANDYFLIX PRO - Complete Application Controller
+ * SPACEFLIX PRO - Complete Application Controller
  * Gère le Hero Spotlight (Sterling Point, Reacher, etc.), les miniatures Hero,
  * la capsule navigation (Home, Trending, List, TV), les carrousels de catégories,
  * le moteur de recherche Spotlight (⌘K), les tiroirs et le lecteur multi-serveurs HD.
@@ -13,39 +13,24 @@ import { SupabaseService } from '../lib/supabaseClient.js';
 const CONFIG = {
   PROVIDERS: window.SPACE_FLIX_CONFIG?.AUTHORIZED_EMBED_PROVIDERS || [
     {
-      name: 'Serveur 1 - VidLink (Multi-Audio VF 1080P)',
-      movie: 'https://vidlink.pro/movie/{tmdb_id}?primaryColor=ff7a00&secondaryColor=121212&autoplay=true',
-      tv: 'https://vidlink.pro/tv/{tmdb_id}/{season}/{episode}?primaryColor=ff7a00&secondaryColor=121212&autoplay=true'
+      name: 'Serveur 1 - VidLink (Multi-Audio, VF Recommandé)',
+      movie: 'https://vidlink.pro/movie/{tmdb_id}?primaryColor=e50914',
+      tv: 'https://vidlink.pro/tv/{tmdb_id}/{season}/{episode}?primaryColor=e50914'
     },
     {
-      name: 'Serveur 2 - VidSrc CC (1080P VF/FR)',
-      movie: 'https://vidsrc.cc/v2/embed/movie/{tmdb_id}?ds_lang=fr',
-      tv: 'https://vidsrc.cc/v2/embed/tv/{tmdb_id}/{season}/{episode}?ds_lang=fr'
-    },
-    {
-      name: 'Serveur 3 - AutoEmbed (Multi-Sources Ultra HD)',
-      movie: 'https://player.autoembed.cc/embed/movie/{tmdb_id}',
-      tv: 'https://player.autoembed.cc/embed/tv/{tmdb_id}/{season}/{episode}'
-    },
-    {
-      name: 'Serveur 4 - FrenchEmbed (100% VF)',
-      movie: 'https://frembed.icu/api/film.php?id={tmdb_id}',
-      tv: 'https://frembed.icu/api/serie.php?id={tmdb_id}&sa={season}&epi={episode}'
-    },
-    {
-      name: 'Serveur 5 - VidSrc Pro (HD Fast)',
+      name: 'Serveur 2 - VidSrc PRO (HD / VF / VOSTFR)',
       movie: 'https://vidsrc.xyz/embed/movie/{tmdb_id}',
       tv: 'https://vidsrc.xyz/embed/tv/{tmdb_id}/{season}/{episode}'
     },
     {
-      name: 'Serveur 6 - SmashyStream (FR & Multi)',
-      movie: 'https://player.smashy.stream/movie/{tmdb_id}',
-      tv: 'https://player.smashy.stream/tv/{tmdb_id}?s={season}&e={episode}'
+      name: 'Serveur 3 - EmbedSmash (HD / Fast)',
+      movie: 'https://embed.smashystream.com/playere.php?tmdb={tmdb_id}',
+      tv: 'https://embed.smashystream.com/playere.php?tmdb={tmdb_id}&s={season}&e={episode}'
     },
     {
-      name: 'Serveur 7 - 2Embed (Stable Backup)',
-      movie: 'https://www.2embed.cc/embed/{tmdb_id}',
-      tv: 'https://www.2embed.cc/embedtv/{tmdb_id}&s={season}&e={episode}'
+      name: 'Serveur 4 - MultiEmbed',
+      movie: 'https://multiembed.net/?video_id={tmdb_id}&tmdb=1',
+      tv: 'https://multiembed.net/?video_id={tmdb_id}&tmdb=1&s={season}&e={episode}'
     }
   ]
 };
@@ -370,7 +355,7 @@ function renderHeroActiveItem(item) {
   if (yearVal) yearVal.textContent = item.release_year || '2026';
   const genreTxt = Array.isArray(item.genres) ? item.genres.join(', ') : (item.genre || 'Action, Thriller');
   if (genreVal) genreVal.textContent = genreTxt;
-  if (synopsisVal) synopsisVal.textContent = item.synopsis || 'Découvrez ce titre incontournable en haute définition sur HANDYFLIX.';
+  if (synopsisVal) synopsisVal.textContent = item.synopsis || 'Découvrez ce titre incontournable en haute définition sur SPACEFLIX.';
 
   if (posterImg) {
     posterImg.src = item.poster_url;
@@ -514,16 +499,26 @@ window.addEventListener('error', (e) => {
 function createPosterCardHTML(item) {
   const typeBadge = item.badge || (item.type === 'tv' ? 'Série' : 'Film');
   const rating = item.rating || '8.0';
+  const title = item.title || 'Sans titre';
+  const year = item.release_year || '2026';
 
   return `
     <div class="pro-card" data-id="${item.id}" id="card-${item.id}">
       <div class="pro-poster-wrapper">
-        <img src="${item.poster_url}" alt="${item.title}" class="pro-poster-img" loading="lazy" decoding="async">
+        <img src="${item.poster_url}" alt="${title}" class="pro-poster-img" loading="lazy" decoding="async">
         <span class="pro-card-badge">${typeBadge}</span>
         <span class="pro-card-quality">1080P</span>
         <span class="pro-card-rating"><i class="fa-solid fa-star"></i> ${rating}</span>
         <div class="pro-card-play-overlay">
           <div class="pro-card-play-icon"><i class="fa-solid fa-play"></i></div>
+        </div>
+      </div>
+      <div class="pro-card-info">
+        <h3 class="pro-card-title">${title}</h3>
+        <div class="pro-card-meta">
+          <span class="pro-meta-year">${year}</span>
+          <span class="pro-meta-dot">•</span>
+          <span class="pro-meta-type">${typeBadge}</span>
         </div>
       </div>
     </div>
@@ -858,6 +853,19 @@ async function openStreamModal(media, season = 1, episode = 1) {
   STATE.currentSeason = season;
   STATE.currentEpisode = episode;
 
+  let tmdbId = media?.tmdb_id;
+  if (!tmdbId && media?.id) {
+    const match = String(media.id).match(/\d+/);
+    if (match) tmdbId = match[0];
+  }
+
+  currentMediaState = {
+    id: tmdbId || media?.id,
+    type: media?.type === 'tv' ? 'tv' : 'movie',
+    season: season,
+    episode: episode
+  };
+
   const modal = document.getElementById('stream-modal');
   if (!modal) return;
 
@@ -976,12 +984,26 @@ async function openStreamModal(media, season = 1, episode = 1) {
     };
   }
 
-  // 2. Bouton Play Now CTA principal
+  // 2. Bouton / Carte Play Now CTA principal
   const playCtaBtn = document.getElementById('movie-play-now-cta-btn');
   if (playCtaBtn) {
     playCtaBtn.onclick = (e) => {
       e.stopPropagation();
       launchPlayer(true);
+    };
+  }
+
+  // 2b. Icône de redirection externe (en haut à droite du bouton Play Now) pour secours _blank
+  const playNowExternalBtn = document.getElementById('movie-play-now-external-btn');
+  if (playNowExternalBtn) {
+    playNowExternalBtn.onclick = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      const url = getStreamUrl();
+      if (url) {
+        window.open(url, '_blank', 'noopener,noreferrer');
+        showToast('Ouverture du flux vidéo dans un nouvel onglet (_blank)');
+      }
     };
   }
 
@@ -1121,67 +1143,103 @@ async function openStreamModal(media, season = 1, episode = 1) {
   });
 }
 
-function getStreamUrl() {
-  if (!STATE.currentMedia) return '';
-  const provider = CONFIG.PROVIDERS[STATE.currentServerIndex] || CONFIG.PROVIDERS[0];
-  
-  // Récupération intelligente de l'ID TMDB
-  let tmdbId = STATE.currentMedia.tmdb_id;
-  if (!tmdbId && STATE.currentMedia.id) {
-    const digits = String(STATE.currentMedia.id).match(/\d+/);
-    if (digits) tmdbId = digits[0];
-  }
-  if (!tmdbId) {
-    tmdbId = '693134'; // ID de secours
+// Variable globale pour conserver l'état du média en cours
+let currentMediaState = { id: null, type: 'movie', season: 1, episode: 1 };
+
+/**
+ * Charge un serveur spécifique dans l'iframe
+ */
+export function loadStreamServer(serverIndex, tmdbId, type = 'movie', season = 1, episode = 1) {
+  const iframe = document.getElementById('stream-video-iframe');
+  if (!iframe) return;
+
+  // Sauvegarde l'état courant
+  if (tmdbId) {
+    currentMediaState = { id: tmdbId, type, season, episode };
+  } else if (!currentMediaState.id && STATE.currentMedia) {
+    let extractedId = STATE.currentMedia.tmdb_id;
+    if (!extractedId && STATE.currentMedia.id) {
+      const match = String(STATE.currentMedia.id).match(/\d+/);
+      if (match) extractedId = match[0];
+    }
+    currentMediaState = {
+      id: extractedId || STATE.currentMedia.id,
+      type: STATE.currentMedia.type || type,
+      season: STATE.currentSeason || season,
+      episode: STATE.currentEpisode || episode
+    };
   }
 
-  const isTv = STATE.currentMedia.type === 'tv';
-  let url = isTv ? provider.tv : provider.movie;
-  return url
-    .replace('{tmdb_id}', tmdbId)
-    .replace('{season}', STATE.currentSeason || 1)
-    .replace('{episode}', STATE.currentEpisode || 1);
+  const providers = CONFIG.PROVIDERS || window.SPACE_FLIX_CONFIG?.AUTHORIZED_EMBED_PROVIDERS;
+  const server = providers[serverIndex];
+  if (!server) {
+    console.error("[Stream] Serveur introuvable à l'index", serverIndex);
+    return;
+  }
+
+  STATE.currentServerIndex = serverIndex;
+  renderServerPills();
+
+  let urlPattern = (currentMediaState.type === 'tv' || currentMediaState.type === 'series') 
+    ? server.tv 
+    : server.movie;
+  
+  let finalUrl = urlPattern.replace('{tmdb_id}', currentMediaState.id)
+                          .replace('{season}', currentMediaState.season)
+                          .replace('{episode}', currentMediaState.episode);
+
+  console.log(`[Stream] Chargement du serveur ${serverIndex + 1} (${server.name}) : ${finalUrl}`);
+  
+  // Injection propre sans boucles ni timers dangereux
+  iframe.src = finalUrl;
+}
+
+if (typeof window !== 'undefined') {
+  window.loadStreamServer = (serverIndex, tmdbId, type, season, episode) => {
+    loadStreamServer(serverIndex, tmdbId, type, season, episode);
+  };
 }
 
 function startActivePlayer(shouldScroll = false) {
   const preview = document.getElementById('stream-player-preview');
   const activeBox = document.getElementById('stream-player-active');
   const loader = document.getElementById('stream-iframe-loader');
-  const iframe = document.getElementById('stream-video-iframe');
 
-  // Masquer explicitement le preview
+  // Masquer le preview
   if (preview) {
     preview.classList.add('hidden');
     preview.style.display = 'none';
     preview.style.pointerEvents = 'none';
   }
 
-  // Afficher explicitement le conteneur actif et le loader
+  // Afficher le conteneur du lecteur actif
   if (activeBox) {
     activeBox.classList.remove('hidden');
     activeBox.style.display = 'block';
   }
+
   if (loader) {
     loader.classList.remove('hidden');
     loader.style.display = 'flex';
+    setTimeout(() => {
+      loader.classList.add('hidden');
+      loader.style.display = 'none';
+    }, 2000);
   }
 
-  const streamUrl = getStreamUrl();
-  if (iframe && streamUrl) {
-    iframe.src = streamUrl;
-    iframe.onload = () => {
-      if (loader) {
-        loader.classList.add('hidden');
-        loader.style.display = 'none';
-      }
-    };
-    setTimeout(() => {
-      if (loader) {
-        loader.classList.add('hidden');
-        loader.style.display = 'none';
-      }
-    }, 2500);
+  let tmdbId = STATE.currentMedia?.tmdb_id;
+  if (!tmdbId && STATE.currentMedia?.id) {
+    const match = String(STATE.currentMedia.id).match(/\d+/);
+    if (match) tmdbId = match[0];
   }
+
+  loadStreamServer(
+    STATE.currentServerIndex || 0,
+    tmdbId || currentMediaState.id,
+    STATE.currentMedia?.type || currentMediaState.type,
+    STATE.currentSeason || currentMediaState.season,
+    STATE.currentEpisode || currentMediaState.episode
+  );
 
   if (shouldScroll) {
     const playerSection = document.getElementById('movie-player-section');
@@ -1297,9 +1355,8 @@ function renderServerPills() {
 
 function updateIframeSource() {
   const iframe = document.getElementById('stream-video-iframe');
-  if (!iframe || !STATE.currentMedia) return;
-  const url = getStreamUrl();
-  if (url) iframe.src = url;
+  if (!iframe) return;
+  loadStreamServer(STATE.currentServerIndex || 0);
 }
 
 async function setupSeriesEpisodes(media) {

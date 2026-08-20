@@ -1,5 +1,5 @@
 /* ======================================================
-   HANDYFLIX / SPACEFLIX PRO STREAMING DESIGN SYSTEM
+   SPACEFLIX PRO STREAMING DESIGN SYSTEM
    Thème : Deep Noir (#050505), Capsule Nav & Hero Spotlight
    ====================================================== */
 
@@ -923,6 +923,46 @@ button {
   gap: 3px;
 }
 
+.pro-card-info {
+  padding: 0.75rem 0.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  background: #121212;
+  flex: 1;
+}
+
+.pro-card-title {
+  font-family: var(--font-heading);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: #f8fafc;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.pro-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.75rem;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+.pro-meta-dot {
+  color: #64748b;
+  font-size: 0.6rem;
+}
+
+.pro-meta-type {
+  color: #ff7a00;
+  font-weight: 600;
+}
+
 /* ======================================================
    INFINITE CONTINUOUS CATALOG & DISCOVERY GRID
    ====================================================== */
@@ -1488,21 +1528,29 @@ button {
 }
 
 .play-cta-arrow-btn {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
   border-radius: 50%;
   background: #f1f5f9;
   color: #0f172a;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 0.85rem;
-  transition: transform 0.2s ease;
+  font-size: 0.9rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .movie-play-now-cta:hover .play-cta-arrow-btn {
-  transform: rotate(45deg);
   background: #e2e8f0;
+}
+
+.play-cta-arrow-btn:hover {
+  background: #ff7a00 !important;
+  color: #ffffff !important;
+  transform: scale(1.15) rotate(45deg) !important;
+  box-shadow: 0 0 14px rgba(255, 122, 0, 0.6);
 }
 
 /* VIDEO PLAYER & SERVERS SECTION */

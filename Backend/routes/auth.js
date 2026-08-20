@@ -205,7 +205,7 @@ router.get('/me', (req, res, next) => {
       success: true,
       user: {
         id: DEFAULT_USER_ID,
-        email: 'guest@handyflix.online',
+        email: 'guest@spaceflix.online',
         name: 'Invité Stream',
         avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
         isGuest: true

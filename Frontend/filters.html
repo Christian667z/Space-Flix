@@ -22,32 +22,32 @@
       TMDB_BASE_URL: 'https://api.themoviedb.org/3',
       AUTHORIZED_EMBED_PROVIDERS: [
         {
-          name: 'Serveur 1 - MultiEmbed (Priorité VF / Multi-Audio)',
-          movie: 'https://multiembed.mov/?video_id={tmdb_id}&tmdb=1',
-          tv: 'https://multiembed.mov/?video_id={tmdb_id}&tmdb=1&s={season}&e={episode}',
-          quality: '1080p',
-          lang: 'VF / Multi'
-        },
-        {
-          name: 'Serveur 2 - VidLink Pro (VF / STFR Automatique)',
-          movie: 'https://vidlink.pro/movie/{tmdb_id}?primaryColor=e50914&subtitles=fre,fra,fr',
-          tv: 'https://vidlink.pro/tv/{tmdb_id}/{season}/{episode}?primaryColor=e50914&subtitles=fre,fra,fr',
+          name: 'Serveur 1 (VidLink - recommandé)',
+          movie: 'https://vidlink.pro/movie/{tmdb_id}?primaryColor=e50914',
+          tv: 'https://vidlink.pro/tv/{tmdb_id}/{season}/{episode}?primaryColor=e50914',
           quality: '1080p',
           lang: 'VF / VOSTFR'
         },
         {
-          name: 'Serveur 3 - VidSrc CC (HD Multi-Audio)',
-          movie: 'https://vidsrc.cc/v2/embed/movie/{tmdb_id}?autoPlay=false',
-          tv: 'https://vidsrc.cc/v2/embed/tv/{tmdb_id}/{season}/{episode}',
+          name: 'Serveur 2 (VidSrc XYZ)',
+          movie: 'https://vidsrc.xyz/embed/movie/{tmdb_id}',
+          tv: 'https://vidsrc.xyz/embed/tv/{tmdb_id}/{season}/{episode}',
+          quality: '1080p',
+          lang: 'VF / VOSTFR'
+        },
+        {
+          name: 'Serveur 3 (SmashyStream)',
+          movie: 'https://embed.smashystream.com/playere.php?tmdb={tmdb_id}',
+          tv: 'https://embed.smashystream.com/playere.php?tmdb={tmdb_id}&s={season}&e={episode}',
           quality: '1080p',
           lang: 'Multi HD'
         },
         {
-          name: 'Serveur 4 - AutoEmbed (Lecteur Alternatif)',
-          movie: 'https://player.autoembed.cc/embed/movie/{tmdb_id}',
-          tv: 'https://player.autoembed.cc/embed/tv/{tmdb_id}/{season}/{episode}',
+          name: 'Serveur 4 (MultiEmbed)',
+          movie: 'https://multiembed.net/?video_id={tmdb_id}&tmdb=1',
+          tv: 'https://multiembed.net/?video_id={tmdb_id}&tmdb=1&s={season}&e={episode}',
           quality: '1080p',
-          lang: 'VF / Multi'
+          lang: 'Multi HD'
         }
       ]
     };
@@ -751,7 +751,7 @@
     <header class="site-header-inner">
       <div class="netflix-header-left">
         <a href="index.html" class="netflix-logo" id="logo-btn" aria-label="SpaceFlix — Accueil" style="display: flex; align-items: center; gap: 8px;">
-          <img src="img/handyflix_cinema_bg.png" alt="Logo" style="height: 32px; width: auto; max-width: 100px; object-fit: contain;">
+          <img src="img/spaceflix_cinema_bg.png" alt="Logo" style="height: 32px; width: auto; max-width: 100px; object-fit: contain;">
           <span class="netflix-logo-text" style="font-family: 'Outfit', sans-serif; font-weight: 900; font-size: 1.35rem; letter-spacing: -0.02em;"><span style="color: #ff7a00;">SPACE</span><span style="color: #ffffff;">FLIX</span></span>
         </a>
 
@@ -1009,7 +1009,7 @@
 
   </main>
 
-  <!-- STREAM PLAYER & DETAILS MODAL (FREEHANDYFLIX NOIR & ROUGE STYLE) -->
+  <!-- STREAM PLAYER & DETAILS MODAL (FREESPACEFLIX NOIR & ROUGE STYLE) -->
   <div class="modal-backdrop hidden" id="player-modal">
     <div class="player-modal-content handy-style-modal">
       
@@ -1168,9 +1168,14 @@
             </div>
 
             <!-- MULTI-SERVERS & EPISODES -->
-            <div class="server-selector-handy">
-              <div class="server-title"><i class="fa-solid fa-server"></i> Serveurs de Streaming :</div>
-              <div id="server-buttons-container" class="server-buttons-grid"></div>
+            <div class="server-selector-handy server-selector-container">
+              <div class="server-title"><i class="fa-solid fa-server"></i> Changer de lecteur :</div>
+              <div id="server-buttons-container" class="server-buttons-grid">
+                <button class="server-pill" onclick="loadStreamServer(0)">Serveur 1</button>
+                <button class="server-pill" onclick="loadStreamServer(1)">Serveur 2</button>
+                <button class="server-pill" onclick="loadStreamServer(2)">Serveur 3</button>
+                <button class="server-pill" onclick="loadStreamServer(3)">Serveur 4</button>
+              </div>
             </div>
 
             <div id="series-episodes-wrapper" class="series-episodes-block" style="display: none;">
@@ -1200,16 +1205,7 @@
       <!-- LECTEUR VIDÉO PRINCIPAL AVEC BARRE DE CONTRÔLE MESURÉE (PHOTO 1 EXCLUSIF) -->
       <div class="player-wrapper-handy hidden" id="player-wrapper-handy">
         <div class="video-container" id="video-container-wrap">
-          <iframe 
-            id="video-iframe" 
-            class="video-iframe" 
-            allowfullscreen 
-            webkitallowfullscreen="true" 
-            mozallowfullscreen="true" 
-            allow="fullscreen; autoplay; encrypted-media; picture-in-picture" 
-            frameborder="0" 
-            scrolling="no">
-          </iframe>
+          <iframe id="video-iframe" class="video-iframe" allowfullscreen frameborder="0" referrerpolicy="origin"></iframe>
 
           <!-- LOADER SPINNER D'ATTENTE (PHOTO 1) -->
           <div id="player-loading-overlay" class="player-loading-overlay hidden">

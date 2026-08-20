@@ -5,26 +5,66 @@
 
 import { INITIAL_MEDIA } from './data.js';
 
-const TMDB_API_KEY = window.SPACE_FLIX_CONFIG?.TMDB_API_KEY || '99b995150ed16f5fc8a3fff320ca41df';
-const TMDB_BASE_URL = window.SPACE_FLIX_CONFIG?.TMDB_BASE_URL || 'https://api.themoviedb.org/3';
+export const AUTHORIZED_EMBED_PROVIDERS = [
+  {
+    name: 'Serveur 1 (VidLink - recommandé)',
+    movie: 'https://vidlink.pro/movie/{tmdb_id}?primaryColor=e50914',
+    tv: 'https://vidlink.pro/tv/{tmdb_id}/{season}/{episode}?primaryColor=e50914'
+  },
+  {
+    name: 'Serveur 2 (VidSrc XYZ)',
+    movie: 'https://vidsrc.xyz/embed/movie/{tmdb_id}',
+    tv: 'https://vidsrc.xyz/embed/tv/{tmdb_id}/{season}/{episode}'
+  },
+  {
+    name: 'Serveur 3 (SmashyStream)',
+    movie: 'https://embed.smashystream.com/playere.php?tmdb={tmdb_id}',
+    tv: 'https://embed.smashystream.com/playere.php?tmdb={tmdb_id}&s={season}&e={episode}'
+  },
+  {
+    name: 'Serveur 4 (MultiEmbed)',
+    movie: 'https://multiembed.net/?video_id={tmdb_id}&tmdb=1',
+    tv: 'https://multiembed.net/?video_id={tmdb_id}&tmdb=1&s={season}&e={episode}'
+  }
+];
+
+export function getApiBaseUrl() {
+  if (window.SPACE_FLIX_CONFIG?.API_BASE_URL) {
+    return window.SPACE_FLIX_CONFIG.API_BASE_URL.replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined' && window.location) {
+    const { protocol, hostname, port } = window.location;
+    if (protocol === 'file:' || (hostname === 'localhost' && port && port !== '3000') || (hostname === '127.0.0.1' && port && port !== '3000')) {
+      return 'http://localhost:3000';
+    }
+  }
+  return '';
+}
 
 async function fetchFromTMDB(endpoint, params = {}) {
   try {
-    // Appel sécurisé via le proxy backend Node.js /api/tmdb/
-    const queryParams = new URLSearchParams({
-      language: 'fr-FR',
-      ...params
-    });
-
-    const proxyUrl = `/api/tmdb/${endpoint}?${queryParams.toString()}`;
-    const proxyRes = await fetch(proxyUrl);
+    const cleanEndpoint = String(endpoint).replace(/^\/+/, '');
+    const queryParams = new URLSearchParams();
     
-    if (proxyRes.ok) {
-      const data = await proxyRes.json();
-      return data;
+    // Langue par défaut
+    queryParams.set('language', 'fr-FR');
+
+    // Injection des paramètres de requête sans clé api_key (gérée côté backend)
+    for (const [key, value] of Object.entries(params)) {
+      if (value !== undefined && value !== null && key !== 'api_key') {
+        queryParams.set(key, String(value));
+      }
+    }
+
+    const baseUrl = getApiBaseUrl();
+    const proxyUrl = `${baseUrl}/api/tmdb/${cleanEndpoint}?${queryParams.toString()}`;
+
+    const res = await fetch(proxyUrl);
+    if (res.ok) {
+      return await res.json();
     }
   } catch (err) {
-    console.warn(`[TMDB Client] Erreur de communication avec le proxy backend /api/tmdb/${endpoint}:`, err.message);
+    console.warn(`[TMDB Client] Erreur lors de l'appel au proxy /api/tmdb/${endpoint}:`, err.message);
   }
   return null;
 }

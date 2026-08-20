@@ -1,5 +1,5 @@
 /**
- * HANDYFLIX - Complete Curated Categories, Hero Featured & FAQ Data
+ * SPACEFLIX - Complete Curated Categories, Hero Featured & FAQ Data
  * All verified directly against TMDB API
  */
 
@@ -718,8 +718,8 @@ export const INITIAL_MEDIA = [
 
 export const FAQ_DATA = [
   {
-    q: "HANDYFLIX est-il 100% gratuit et sans abonnement ?",
-    a: "Oui ! HANDYFLIX est entièrement gratuit. Aucun compte, aucune carte bancaire et aucun abonnement ne sont requis pour regarder vos films et séries préférés en haute définition."
+    q: "SPACEFLIX est-il 100% gratuit et sans abonnement ?",
+    a: "Oui ! SPACEFLIX est entièrement gratuit. Aucun compte, aucune carte bancaire et aucun abonnement ne sont requis pour regarder vos films et séries préférés en haute définition."
   },
   {
     q: "Comment changer de serveur ou de langue (VF / VOSTFR / Multi-Audio) ?",
@@ -727,7 +727,7 @@ export const FAQ_DATA = [
   },
   {
     q: "Puis-je regarder sur ma TV (Chromecast / AirPlay) ou mon smartphone ?",
-    a: "Absolument. HANDYFLIX est 100% responsive et optimisé pour tous les écrans : smartphones, tablettes, ordinateurs et téléviseurs connectés."
+    a: "Absolument. SPACEFLIX est 100% responsive et optimisé pour tous les écrans : smartphones, tablettes, ordinateurs et téléviseurs connectés."
   },
   {
     q: "Comment fonctionne la reprise de lecture automatique ?",

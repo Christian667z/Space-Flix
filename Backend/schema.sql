@@ -6,8 +6,15 @@
 -- 1. Active l'extension uuid-ossp si besoin
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Table des Médias (Films & Séries)
-CREATE TABLE IF NOT EXISTS public.media (
+-- 2. Réinitialisation des tables existantes (Évite l'erreur UUID sur media.id si la table existe déjà)
+DROP TABLE IF EXISTS public.favorites CASCADE;
+DROP TABLE IF EXISTS public.user_history CASCADE;
+DROP TABLE IF EXISTS public.episodes CASCADE;
+DROP TABLE IF EXISTS public.media CASCADE;
+DROP TABLE IF EXISTS public.profiles CASCADE;
+
+-- 3. Table des Médias (Films & Séries) avec ID de type TEXT (ex: 'm-dune-2', '693134')
+CREATE TABLE public.media (
     id TEXT PRIMARY KEY,
     title VARCHAR(255) NOT NULL,
     slug VARCHAR(255) UNIQUE NOT NULL,
@@ -26,8 +33,8 @@ CREATE TABLE IF NOT EXISTS public.media (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
 );
 
--- 3. Table des Épisodes (Pour les séries)
-CREATE TABLE IF NOT EXISTS public.episodes (
+-- 4. Table des Épisodes (Pour les séries)
+CREATE TABLE public.episodes (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     media_id TEXT REFERENCES public.media(id) ON DELETE CASCADE,
     season_number INT NOT NULL,
@@ -40,8 +47,8 @@ CREATE TABLE IF NOT EXISTS public.episodes (
     CONSTRAINT unique_episode_per_season UNIQUE(media_id, season_number, episode_number)
 );
 
--- 4. Table des Favoris ("Ma Liste")
-CREATE TABLE IF NOT EXISTS public.favorites (
+-- 5. Table des Favoris ("Ma Liste")
+CREATE TABLE public.favorites (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     media_id TEXT REFERENCES public.media(id) ON DELETE CASCADE,
@@ -49,8 +56,8 @@ CREATE TABLE IF NOT EXISTS public.favorites (
     CONSTRAINT unique_user_favorite UNIQUE(user_id, media_id)
 );
 
--- 5. Table de Reprise de Lecture Automatique & Historique (Continue Watching)
-CREATE TABLE IF NOT EXISTS public.user_history (
+-- 6. Table de Reprise de Lecture Automatique & Historique (Continue Watching)
+CREATE TABLE public.user_history (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
     media_id TEXT NOT NULL,
@@ -68,8 +75,8 @@ CREATE TABLE IF NOT EXISTS public.user_history (
     CONSTRAINT unique_user_media_playback UNIQUE(user_id, media_id, season_number, episode_number)
 );
 
--- 6. Table des Profils Utilisateurs
-CREATE TABLE IF NOT EXISTS public.profiles (
+-- 7. Table des Profils Utilisateurs
+CREATE TABLE public.profiles (
     id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
     full_name VARCHAR(255),
     avatar_url TEXT,

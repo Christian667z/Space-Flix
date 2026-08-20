@@ -49,9 +49,9 @@ export const DB = {
 
 // Initialisation utilisateur démo
 const demoPasswordHash = bcrypt.hashSync('demo1234', 10);
-DB.users.set('demo@handyflix.com', {
+DB.users.set('demo@spaceflix.com', {
   id: 'user-demo-1',
-  email: 'demo@handyflix.com',
+  email: 'demo@spaceflix.com',
   name: 'Cinéphile VIP',
   passwordHash: demoPasswordHash,
   avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',

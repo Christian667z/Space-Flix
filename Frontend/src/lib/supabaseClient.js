@@ -37,6 +37,19 @@ const LOCAL_FAVORITES_KEY = 'space_flix_my_list';
 const LOCAL_WATCH_HISTORY_KEY = 'space_flix_continue_watching';
 const LOCAL_AUTH_TOKEN_KEY = 'space_flix_auth_token';
 
+export function getApiBaseUrl() {
+  if (window.SPACE_FLIX_CONFIG?.API_BASE_URL) {
+    return window.SPACE_FLIX_CONFIG.API_BASE_URL.replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined' && window.location) {
+    const { protocol, hostname, port } = window.location;
+    if (protocol === 'file:' || (hostname === 'localhost' && port && port !== '3000') || (hostname === '127.0.0.1' && port && port !== '3000')) {
+      return 'http://localhost:3000';
+    }
+  }
+  return '';
+}
+
 function getAuthHeaders() {
   const token = localStorage.getItem(LOCAL_AUTH_TOKEN_KEY);
   const headers = { 'Content-Type': 'application/json' };
@@ -78,7 +91,7 @@ export const SupabaseService = {
   async getCurrentUser() {
     // 1. Vérifier via le backend Node.js
     try {
-      const res = await fetch('/api/auth/me', { headers: getAuthHeaders() });
+      const res = await fetch(`${getApiBaseUrl()}/api/auth/me`, { headers: getAuthHeaders() });
       if (res.ok) {
         const data = await res.json();
         if (data.user && !data.user.isGuest) {
@@ -103,7 +116,7 @@ export const SupabaseService = {
 
   async signIn({ email, password }) {
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${getApiBaseUrl()}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password })
@@ -124,7 +137,7 @@ export const SupabaseService = {
 
   async signUp({ email, password, name }) {
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(`${getApiBaseUrl()}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password, name })
@@ -149,7 +162,7 @@ export const SupabaseService = {
 
   async signOut() {
     try {
-      await fetch('/api/auth/logout', {
+      await fetch(`${getApiBaseUrl()}/api/auth/logout`, {
         method: 'POST',
         headers: getAuthHeaders()
       });
@@ -252,7 +265,7 @@ export const SupabaseService = {
   async getFavorites() {
     // 1. Appel de l'endpoint backend Node.js
     try {
-      const res = await fetch('/api/favorites', { headers: getAuthHeaders() });
+      const res = await fetch(`${getApiBaseUrl()}/api/favorites`, { headers: getAuthHeaders() });
       if (res.ok) {
         const data = await res.json();
         if (data.favorites && Array.isArray(data.favorites)) {
@@ -279,7 +292,7 @@ export const SupabaseService = {
 
     // 1. Appel du backend Node.js /api/favorites/toggle
     try {
-      const res = await fetch('/api/favorites/toggle', {
+      const res = await fetch(`${getApiBaseUrl()}/api/favorites/toggle`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({ mediaId: targetId })
@@ -346,7 +359,7 @@ export const SupabaseService = {
 
     // 1. Envoi au backend Node.js /api/history
     try {
-      fetch('/api/history', {
+      fetch(`${getApiBaseUrl()}/api/history`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({
@@ -396,7 +409,7 @@ export const SupabaseService = {
   async getAllContinueWatching() {
     // 1. Appel du backend Node.js /api/history
     try {
-      const res = await fetch('/api/history', { headers: getAuthHeaders() });
+      const res = await fetch(`${getApiBaseUrl()}/api/history`, { headers: getAuthHeaders() });
       if (res.ok) {
         const data = await res.json();
         if (data.history && Array.isArray(data.history) && data.history.length > 0) {
@@ -430,7 +443,7 @@ export const SupabaseService = {
    */
   async removePlaybackProgress(mediaId, seasonNumber = 1, episodeNumber = 1) {
     try {
-      fetch(`/api/history/${mediaId}?season=${seasonNumber}&episode=${episodeNumber}`, {
+      fetch(`${getApiBaseUrl()}/api/history/${mediaId}?season=${seasonNumber}&episode=${episodeNumber}`, {
         method: 'DELETE',
         headers: getAuthHeaders()
       }).catch(() => {});
@@ -446,7 +459,7 @@ export const SupabaseService = {
    */
   async reportBrokenStream({ tmdb_id, media_title, server_name, server_index, error_type, details }) {
     try {
-      const res = await fetch('/api/report', {
+      const res = await fetch(`${getApiBaseUrl()}/api/report`, {
         method: 'POST',
         headers: getAuthHeaders(),
         body: JSON.stringify({

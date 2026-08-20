@@ -1,0 +1,107 @@
+{
+  "users": [
+    {
+      "id": "user-demo-1",
+      "email": "demo@spaceflix.com",
+      "name": "Cinéphile VIP",
+      "passwordHash": "$2b$10$Y36qz0Z.Nag4WqPSbA6wC.FWOhtTUF8Rhw1tUYAUUkRA.p4SAXy.S",
+      "avatar": "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80",
+      "createdAt": "2026-08-20T13:44:30.797Z"
+    }
+  ],
+  "sessions": [],
+  "history": [
+    [
+      "user-demo-1",
+      []
+    ],
+    [
+      "guest-user-default",
+      [
+        {
+          "mediaId": "m-1084244",
+          "media": {
+            "id": "m-1084244",
+            "tmdb_id": "m-1084244",
+            "title": "Toy Story 5",
+            "poster_url": "https://image.tmdb.org/t/p/w500/b2bt3UomRX41rHHZmIsSNmXzidU.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/original/8sSKdEmlmqF4kJUd28SqthXC4yZ.jpg",
+            "type": "movie",
+            "rating": 8
+          },
+          "season": 1,
+          "episode": 1,
+          "progressSeconds": 60,
+          "durationSeconds": 7200,
+          "progressPercent": 1,
+          "completed": false,
+          "updatedAt": "2026-08-20T14:13:31.408Z"
+        },
+        {
+          "mediaId": "m-24428",
+          "media": {
+            "id": "m-24428",
+            "tmdb_id": "m-24428",
+            "title": "Avengers",
+            "poster_url": "https://image.tmdb.org/t/p/w500/ylsAO88v2tF0iXRFojPa0UaAJf1.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/original/9BBTo63ANSmhC4e6r62OJFuK2GL.jpg",
+            "type": "movie",
+            "rating": 8
+          },
+          "season": 1,
+          "episode": 1,
+          "progressSeconds": 60,
+          "durationSeconds": 7200,
+          "progressPercent": 1,
+          "completed": false,
+          "updatedAt": "2026-08-20T14:17:04.883Z"
+        },
+        {
+          "mediaId": "m-1288445",
+          "media": {
+            "id": "m-1288445",
+            "tmdb_id": "m-1288445",
+            "title": "Mutiny",
+            "poster_url": "https://image.tmdb.org/t/p/w500/rfRLWbxLZPq2eboKPsBvh1NgNwM.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/original/frG3IO5kCrnyXDt1q9x4JtToSw3.jpg",
+            "type": "movie",
+            "rating": 8
+          },
+          "season": 1,
+          "episode": 1,
+          "progressSeconds": 60,
+          "durationSeconds": 7200,
+          "progressPercent": 1,
+          "completed": false,
+          "updatedAt": "2026-08-20T13:53:15.337Z"
+        },
+        {
+          "mediaId": "m-1375646",
+          "media": {
+            "id": "m-1375646",
+            "tmdb_id": "m-1375646",
+            "title": "Colony",
+            "poster_url": "https://image.tmdb.org/t/p/w500/1CuYfdSqpIjsWIaCftQKBCjNlG.jpg",
+            "backdrop_url": "https://image.tmdb.org/t/p/original/84FEpVVbSKYvKXDZJDZXOKBxCEm.jpg",
+            "type": "movie",
+            "rating": 8
+          },
+          "season": 1,
+          "episode": 1,
+          "progressSeconds": 60,
+          "durationSeconds": 7200,
+          "progressPercent": 1,
+          "completed": false,
+          "updatedAt": "2026-08-20T13:52:31.412Z"
+        }
+      ]
+    ]
+  ],
+  "favorites": [
+    [
+      "user-demo-1",
+      []
+    ]
+  ],
+  "reports": []
+}
