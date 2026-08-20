@@ -8,6 +8,7 @@
 import { HERO_FEATURED_ITEMS, CATEGORIES_CONFIG, INITIAL_MEDIA, FAQ_DATA } from '../lib/data.js';
 import { TMDB } from '../lib/tmdbClient.js';
 import { SupabaseService } from '../lib/supabaseClient.js';
+import { OMDb } from '../lib/omdbClient.js';
 
 // Configuration Multi-Serveurs Haut Débit 1080P VF/VOSTFR
 const CONFIG = {
@@ -1086,6 +1087,28 @@ async function openStreamModal(media, season = 1, episode = 1) {
   if (synopsisElem) {
     synopsisElem.textContent = media.synopsis || 'Profitez de ce titre en haute définition gratuit sur SPACEFLIX.';
   }
+
+  // Enrichissement asynchrone des métadonnées avec OMDb API (Rotten Tomatoes, IMDb, Awards)
+  (async () => {
+    try {
+      const omdbData = await OMDb.fetchOmdbDetails({
+        title: media.title,
+        year: media.release_year,
+        type: media.type === 'tv' ? 'series' : 'movie'
+      });
+
+      if (omdbData && omdbData.Response === 'True') {
+        // Mettre à jour la note avec Rotten Tomatoes ou IMDb si pertinent
+        if (omdbData.ratings_summary?.rotten_tomatoes && ratingBadge) {
+          ratingBadge.innerHTML = `<i class="fa-solid fa-star" style="color: #fbbf24; margin-right: 4px;"></i> ${omdbData.imdbRating || media.rating || '8.4'} <span style="font-size:0.75rem; color:#ef4444; margin-left:4px;" title="Rotten Tomatoes Score">🍅 ${omdbData.ratings_summary.rotten_tomatoes}</span>`;
+        } else if (omdbData.imdbRating && ratingBadge) {
+          ratingBadge.innerHTML = `<i class="fa-solid fa-star" style="color: #fbbf24; margin-right: 4px;"></i> ${omdbData.imdbRating}`;
+        }
+      }
+    } catch (e) {
+      console.warn('OMDb enrichment error:', e);
+    }
+  })();
 
   // =========================================================================
   // GESTION DU LECTEUR VIDÉO : PAR DÉFAUT AFFICHÉ EN PREVIEW AVEC BOUTON PLAY

@@ -17,6 +17,9 @@ import tmdbRoutes from './Backend/routes/tmdb.js';
 import historyRoutes from './Backend/routes/history.js';
 import favoritesRoutes from './Backend/routes/favorites.js';
 import reportRoutes from './Backend/routes/report.js';
+import omdbRoutes from './Backend/routes/omdb.js';
+import subtitlesRoutes from './Backend/routes/subtitles.js';
+import jikanRoutes from './Backend/routes/jikan.js';
 
 // Import des middlewares de sécurité et gestion des erreurs
 import { errorHandler, notFoundHandler } from './Backend/middlewares/errorHandler.js';
@@ -59,6 +62,9 @@ app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 // 3. ENREGISTREMENT DES ROUTES MODULAIRES API (/api/*)
 // =========================================================================
 app.use('/api/tmdb', tmdbRoutes);         // Proxy TMDB avec clé sécurisée et cache
+app.use('/api/omdb', omdbRoutes);         // API OMDb (Notes IMDb, Rotten Tomatoes, Metacritic, Awards)
+app.use('/api/subtitles', subtitlesRoutes); // Sous-titres multi-langues SubDL
+app.use('/api/jikan', jikanRoutes);       // API Jikan v4 (MyAnimeList)
 app.use('/api/history', historyRoutes);   // Historique et reprise de lecture "Continue Watching"
 app.use('/api/favorites', favoritesRoutes); // Gestion des favoris "Ma Liste"
 app.use('/api/auth', authRoutes);         // Inscription, Connexion, Profils & Mot de passe
