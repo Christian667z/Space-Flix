@@ -736,6 +736,78 @@
     </div>
   </div>
 
+  <!-- MODAL D'AUTHENTIFICATION & COMPTE UTILISATEUR -->
+  <div class="auth-modal-backdrop hidden" id="auth-modal">
+    <div class="auth-card">
+      <button class="auth-close-btn" id="close-auth-btn" aria-label="Fermer"><i class="fa-solid fa-xmark"></i></button>
+
+      <!-- VUE FORMULAIRE DE CONNEXION / INSCRIPTION -->
+      <div id="auth-form-view">
+        <div class="auth-header">
+          <img src="img/spaceflix_cinema_bg.png" alt="SPACEFLIX" class="auth-logo" style="width:auto; height:36px; object-fit:contain;" onerror="this.onerror=null; this.src='img/spaceflix_cinema_bg.png';">
+          <h2 class="auth-title" id="auth-modal-title">Espace Membre SPACEFLIX</h2>
+          <p class="auth-subtitle" id="auth-modal-subtitle">Connectez-vous pour synchroniser vos favoris et la reprise de lecture.</p>
+        </div>
+
+        <div class="auth-tabs-row">
+          <button class="auth-tab-btn active" id="tab-login-btn">Se connecter</button>
+          <button class="auth-tab-btn" id="tab-signup-btn">S'inscrire</button>
+        </div>
+
+        <form id="auth-form">
+          <div class="auth-field" id="name-field-group" style="display: none;">
+            <label for="auth-name">Nom d'utilisateur</label>
+            <div class="auth-input-wrap">
+              <i class="fa-regular fa-user"></i>
+              <input type="text" id="auth-name" placeholder="Ex: Alex Flix" autocomplete="name">
+            </div>
+          </div>
+
+          <div class="auth-field">
+            <label for="auth-email">Adresse E-mail</label>
+            <div class="auth-input-wrap">
+              <i class="fa-regular fa-envelope"></i>
+              <input type="email" id="auth-email" placeholder="nom@exemple.com" required autocomplete="email">
+            </div>
+          </div>
+
+          <div class="auth-field">
+            <label for="auth-password">Mot de passe</label>
+            <div class="auth-input-wrap">
+              <i class="fa-solid fa-lock"></i>
+              <input type="password" id="auth-password" placeholder="••••••••" required autocomplete="current-password">
+              <button type="button" class="toggle-password-btn" id="toggle-pwd-btn" style="background:none; border:none; color:#64748b; cursor:pointer;" aria-label="Afficher le mot de passe">
+                <i class="fa-regular fa-eye"></i>
+              </button>
+            </div>
+          </div>
+
+          <div class="auth-error-msg hidden" id="auth-error-msg" style="color:#ef4444; font-size:0.8rem; margin-top:0.5rem; text-align:center;"></div>
+
+          <button type="submit" class="auth-submit-btn" id="auth-submit-btn">
+            <i class="fa-solid fa-right-to-bracket"></i>
+            <span>Se connecter</span>
+          </button>
+        </form>
+      </div>
+
+      <!-- VUE PROFIL DÉJÀ CONNECTÉ -->
+      <div id="auth-profile-view" class="hidden">
+        <div class="profile-card-header">
+          <img src="" id="profile-avatar-img" alt="Avatar" class="profile-avatar-img" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80';">
+          <div>
+            <h3 id="profile-user-name" style="font-weight:700; color:#fff; font-size:1.1rem;">Utilisateur</h3>
+            <p id="profile-user-email" style="font-size:0.8rem; color:#94a3b8;">email@exemple.com</p>
+          </div>
+        </div>
+        <button id="auth-logout-btn" class="auth-submit-btn" style="background:#dc2626; margin-top:1rem;">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          <span>Se déconnecter</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- APPLICATION CONTROLLER -->
   <script type="module" src="src/app/main.js"></script>
 </body>

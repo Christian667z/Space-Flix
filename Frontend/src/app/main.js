@@ -845,6 +845,164 @@ function setupDrawers() {
 }
 
 // =========================================================================
+// 6B. AUTHENTIFICATION & COMPTE UTILISATEUR
+// =========================================================================
+
+function setupAuthModal() {
+  const userBtn = document.getElementById('btn-user-account');
+  const modal = document.getElementById('auth-modal');
+  const closeBtn = document.getElementById('close-auth-btn');
+  const tabLogin = document.getElementById('tab-login-btn');
+  const tabSignup = document.getElementById('tab-signup-btn');
+  const nameField = document.getElementById('name-field-group');
+  const authForm = document.getElementById('auth-form');
+  const authTitle = document.getElementById('auth-modal-title');
+  const authSubtitle = document.getElementById('auth-modal-subtitle');
+  const submitBtn = document.getElementById('auth-submit-btn');
+  const errorMsg = document.getElementById('auth-error-msg');
+  const togglePwdBtn = document.getElementById('toggle-pwd-btn');
+  const passwordInput = document.getElementById('auth-password');
+  const formView = document.getElementById('auth-form-view');
+  const profileView = document.getElementById('auth-profile-view');
+  const logoutBtn = document.getElementById('auth-logout-btn');
+
+  if (!modal) return;
+
+  let isSignUp = false;
+
+  const updateUIForUser = (user) => {
+    if (user && !user.isGuest) {
+      if (formView) formView.classList.add('hidden');
+      if (profileView) profileView.classList.remove('hidden');
+      const nameEl = document.getElementById('profile-user-name');
+      const emailEl = document.getElementById('profile-user-email');
+      const avatarEl = document.getElementById('profile-avatar-img');
+      if (nameEl) nameEl.textContent = user.name || user.email.split('@')[0];
+      if (emailEl) emailEl.textContent = user.email;
+      if (avatarEl && user.avatar) avatarEl.src = user.avatar;
+    } else {
+      if (formView) formView.classList.remove('hidden');
+      if (profileView) profileView.classList.add('hidden');
+    }
+  };
+
+  const openAuth = async () => {
+    modal.classList.remove('hidden');
+    if (errorMsg) {
+      errorMsg.textContent = '';
+      errorMsg.classList.add('hidden');
+    }
+    const currentUser = await SupabaseService.getUser();
+    updateUIForUser(currentUser);
+  };
+
+  const closeAuth = () => {
+    modal.classList.add('hidden');
+  };
+
+  if (userBtn) userBtn.addEventListener('click', openAuth);
+  if (closeBtn) closeBtn.addEventListener('click', closeAuth);
+
+  modal.addEventListener('click', (e) => {
+    if (e.target === modal) closeAuth();
+  });
+
+  if (tabLogin && tabSignup) {
+    tabLogin.addEventListener('click', () => {
+      isSignUp = false;
+      tabLogin.classList.add('active');
+      tabSignup.classList.remove('active');
+      if (nameField) nameField.style.display = 'none';
+      if (authTitle) authTitle.textContent = 'Espace Membre SPACEFLIX';
+      if (authSubtitle) authSubtitle.textContent = 'Connectez-vous pour synchroniser vos favoris et la reprise de lecture.';
+      if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> <span>Se connecter</span>';
+      if (errorMsg) errorMsg.classList.add('hidden');
+    });
+
+    tabSignup.addEventListener('click', () => {
+      isSignUp = true;
+      tabSignup.classList.add('active');
+      tabLogin.classList.remove('active');
+      if (nameField) nameField.style.display = 'block';
+      if (authTitle) authTitle.textContent = 'Créer un Compte SPACEFLIX';
+      if (authSubtitle) authSubtitle.textContent = 'Rejoignez SPACEFLIX pour enregistrer vos listes et synchroniser vos appareils.';
+      if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> <span>S\'inscrire</span>';
+      if (errorMsg) errorMsg.classList.add('hidden');
+    });
+  }
+
+  if (togglePwdBtn && passwordInput) {
+    togglePwdBtn.addEventListener('click', () => {
+      const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+      passwordInput.setAttribute('type', type);
+      togglePwdBtn.innerHTML = type === 'password'
+        ? '<i class="fa-regular fa-eye"></i>'
+        : '<i class="fa-regular fa-eye-slash"></i>';
+    });
+  }
+
+  if (authForm) {
+    authForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('auth-email')?.value?.trim();
+      const password = document.getElementById('auth-password')?.value;
+      const name = document.getElementById('auth-name')?.value?.trim();
+
+      if (!email || !password) {
+        if (errorMsg) {
+          errorMsg.textContent = 'Veuillez remplir tous les champs obligatoires.';
+          errorMsg.classList.remove('hidden');
+        }
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> <span>Traitement en cours...</span>';
+
+      try {
+        let result;
+        if (isSignUp) {
+          result = await SupabaseService.signUp({ email, password, name });
+        } else {
+          result = await SupabaseService.signIn({ email, password });
+        }
+
+        if (result.error) {
+          if (errorMsg) {
+            errorMsg.textContent = result.error.message || 'Erreur lors de l\'authentification.';
+            errorMsg.classList.remove('hidden');
+          }
+        } else {
+          showToast(isSignUp ? 'Compte créé avec succès !' : 'Connexion réussie !');
+          closeAuth();
+          const user = result.data?.user || { email, name: name || email.split('@')[0] };
+          updateUIForUser(user);
+        }
+      } catch (err) {
+        if (errorMsg) {
+          errorMsg.textContent = 'Une erreur est survenue. Veuillez réessayer.';
+          errorMsg.classList.remove('hidden');
+        }
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = isSignUp
+          ? '<i class="fa-solid fa-user-plus"></i> <span>S\'inscrire</span>'
+          : '<i class="fa-solid fa-right-to-bracket"></i> <span>Se connecter</span>';
+      }
+    });
+  }
+
+  if (logoutBtn) {
+    logoutBtn.addEventListener('click', async () => {
+      await SupabaseService.signOut();
+      showToast('Déconnexion effectuée');
+      updateUIForUser(null);
+      closeAuth();
+    });
+  }
+}
+
+// =========================================================================
 // 7. LECTEUR VIDÉO MULTI-SERVEURS & MODAL DÉTAILS
 // =========================================================================
 
@@ -1663,6 +1821,7 @@ function startApp() {
   initSplashScreen();
   setupSpotlightSearch();
   setupDrawers();
+  setupAuthModal();
   setupModalCloseListeners();
   setupNavigation();
 }
